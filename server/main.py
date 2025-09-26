@@ -1,14 +1,9 @@
-from common.tcp_messages import InputMessage
-from server.tcp_server import TCPServer
+from server.game_server import GameServer
 
 
 def main():
-    tcp_server = TCPServer(input_received)
-    tcp_server.start()
-
-
-def input_received(mes: InputMessage):
-    print(mes)
+    server = GameServer()
+    server.start()
 
 if __name__ == "__main__":
     main()

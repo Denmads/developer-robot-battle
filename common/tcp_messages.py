@@ -1,20 +1,22 @@
 from dataclasses import dataclass, field
 
+class Message:
+    pass
 
 @dataclass
-class InputMessage:
+class InputMessage(Message):
     message_type: int = field(default=1, init=False)
-    player_id: int
+    player_id: str
     key: int
     state: int
 
 @dataclass
-class RobotClassMessage:
+class PlayerInfoMessage(Message):
     message_type: int = field(default=2, init=False)
-    player_id: int
-    code: str
-
+    id: str
+    udp_port: int
+    robot_code: str
+    
 @dataclass
-class PlayerInfoMessage:
+class StartMessage(Message):
     message_type: int = field(default=3, init=False)
-    id: int
