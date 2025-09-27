@@ -143,12 +143,20 @@ class Game:
         dx = robot_move_speed * math.cos(player.robot.angle)
         dy = robot_move_speed * math.sin(player.robot.angle)
         
+        new_pos_x = player.robot.x
+        new_pos_y = player.robot.y
+        
         if player.keys.up:
-            player.robot.x += dx
-            player.robot.y += dy
+            new_pos_x = player.robot.x + dx
+            new_pos_y = player.robot.y + dy
         if player.keys.down:
-            player.robot.x -= dx
-            player.robot.y -= dy
+            new_pos_x = player.robot.x - dx
+            new_pos_y = player.robot.y - dy
+                
+        if new_pos_x >= ROBOT_RADIUS and new_pos_x <= ARENA_WIDTH - ROBOT_RADIUS:
+            player.robot.x = new_pos_x
+        if new_pos_y >= ROBOT_RADIUS and new_pos_y <= ARENA_HEIGHT - ROBOT_RADIUS:
+            player.robot.y = new_pos_y
             
         if player.keys.q and not player.old_keys.q:
             player.robot.ability_func(1)
