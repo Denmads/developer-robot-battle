@@ -7,5 +7,5 @@ class Player:
     id: str
     udp_port: int
     socket: socket.socket
-    robot: RobotInterface
+    robot_configuration: RobotInterface
     

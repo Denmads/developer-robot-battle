@@ -1,22 +1,43 @@
+from dataclasses import dataclass, field
 from typing import Callable
 
-from common.constants import MAX_HP
+from common.robot_hull import RobotHullType, get_hull_instance
+from common.robot_stats import RobotStats
+
+@dataclass
+class RobotBuilder:
+    hull: RobotHullType = field(default=RobotHullType.STANDARD)
 
 
 class RobotInterface:
     
-    def create_robot(self) -> None:
+    def build_robot(self, builder: RobotBuilder) -> None:
+        pass
+    
+    def apply_stats(self, stats: RobotStats) -> None:
         pass
 
     def do_ability(self, index: int) -> None:
         pass
     
 
+
+
 class Robot:
     
-    def __init__(self, x: int, y: int, angle: float, ability_func: Callable[[int], None]):
+    def __init__(self, hull_type: RobotHullType, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int], None]):
+        self.hull = get_hull_instance(hull_type)
+        
+        self.stats = stats
         self.ability_func = ability_func
+        
         self.x = x
         self.y = y
         self.angle = angle
-        self.hp = MAX_HP
+        
+        self.max_hp = self.hull.max_health + round(self.stats.max_health * 5)
+        self.hp = self.max_hp
+        
+        self.max_energy = self.hull.max_energy + round(self.stats.max_energy * 5)
+        self.energy = self.max_energy
+        self.energy_regen = self.hull.energy_regen + self.stats.energy_regen * 0.01

@@ -2,8 +2,11 @@ from dataclasses import dataclass
 import random
 import colorsys
 
-class PlayerColors:
+from common.robot_hull import RobotHullType
+
+class PlayerInfo:
     colors: dict[int, tuple[int, int, int]]
+    hulls: dict[int, RobotHullType]
     
     def __init__(self, ids: list[int]):
         self.colors = {}
@@ -23,6 +26,10 @@ class PlayerState:
     y: int
     angle: float
     hp: int
+    max_hp: int
+    energy: int
+    max_energy: int
+    
     
 @dataclass
 class ProjectileState:

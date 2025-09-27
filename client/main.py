@@ -3,8 +3,7 @@ from client.core.game_client import GameClient
 
 
 def main():
-    id = input("Enter player id: ")
-    client = GameClient(id)
+    client = GameClient()
     client.start()
 
 
