@@ -14,6 +14,7 @@ class PlayerColors:
 
 class GameState:
     players: list["PlayerState"]
+    projectiles: list["ProjectileState"]
 
 @dataclass
 class PlayerState:
@@ -22,3 +23,10 @@ class PlayerState:
     y: int
     angle: float
     hp: int
+    
+@dataclass
+class ProjectileState:
+    x: int
+    y: int
+    angle: float
+    size: int

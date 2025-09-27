@@ -13,6 +13,7 @@ class GameRenderer:
         
     def render(self, screen: pygame.Surface):
         self._draw_players(screen)
+        self._draw_projectiles(screen)
         self._draw_player_healthbars(screen)
         
     def _draw_players(self, screen: pygame.Surface):
@@ -22,6 +23,10 @@ class GameRenderer:
                 player.x + ROBOT_RADIUS * math.cos(player.angle),
                 player.y + ROBOT_RADIUS * math.sin(player.angle)
             ))
+            
+    def _draw_projectiles(self, screen: pygame.Surface):
+        for projectile in self.state.projectiles:
+            pygame.draw.circle(screen, (253, 216, 53), (projectile.x, projectile.y), projectile.size)
             
     def _draw_player_healthbars(self, screen: pygame.Surface):
         for player in self.state.players:
