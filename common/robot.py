@@ -25,8 +25,9 @@ class RobotInterface:
 
 class Robot:
     
-    def __init__(self, hull_type: RobotHullType, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int], None]):
-        self.hull = get_hull_instance(hull_type)
+    def __init__(self, configuration: RobotBuilder, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int], None]):
+        self.configuration = configuration
+        self.hull = get_hull_instance(configuration.hull)
         
         self.stats = stats
         self.ability_func = ability_func
@@ -34,6 +35,8 @@ class Robot:
         self.x = x
         self.y = y
         self.angle = angle
+        
+        self.size = self.hull.size - max(round(self.stats.size), 5)
         
         self.max_hp = self.hull.max_health + round(self.stats.max_health * 5)
         self.hp = self.max_hp

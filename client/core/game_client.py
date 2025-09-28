@@ -96,7 +96,7 @@ class GameClient:
                 self.renderer.render(self.screen)
             
             pygame.display.flip()
-            self.clock.tick(30)
+            self.clock.tick(60)
             
         pygame.quit()
         self.tcp_client.close()

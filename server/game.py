@@ -7,8 +7,7 @@ import pygame
 from common.game_state import GameState, PlayerInfo, PlayerState, ProjectileState
 from common.projectile import Projectile
 from common.robot import Robot, RobotBuilder, RobotStats
-from common.constants import ARENA_HEIGHT, ARENA_WIDTH, ROBOT_RADIUS
-from common.robot_hull import RobotHullType
+from common.constants import ARENA_HEIGHT, ARENA_WIDTH
 from server.player import Player
 
 
@@ -73,7 +72,7 @@ class Game:
         middle_y = ARENA_HEIGHT / 2
         
         self.players: dict[str, PlayerInstance] = {}
-        hulls_dict: dict[int, RobotHullType] = {}
+        
         for i, player in enumerate(players):
             stats = RobotStats()
             player.robot_configuration.apply_stats(stats)    
@@ -82,12 +81,10 @@ class Game:
             builder = RobotBuilder()
             player.robot_configuration.build_robot(builder)
             
-            hulls_dict[i] = builder.hull
-            
             self.players[player.id] = PlayerInstance(
                 i,
                 Robot(
-                    builder.hull,
+                    builder,
                     stats,
                     middle_x + starting_dist_from_middle * math.cos(angle_step * i), 
                     middle_y + starting_dist_from_middle * math.sin(angle_step * i),
@@ -97,7 +94,10 @@ class Game:
             )
             
         player_info = PlayerInfo([idx for idx, _ in enumerate(self.players)])
-        player_info.hulls = hulls_dict
+        player_info.hulls = {p.idx: p.robot.configuration.hull for p in self.players.values()}
+        player_info.sizes = {p.idx: p.robot.size for p in self.players.values()}
+        player_info.max_hp = {p.idx: p.robot.max_hp for p in self.players.values()}
+        player_info.max_energy = {p.idx: p.robot.max_energy for p in self.players.values()}
         self.send_udp(player_info)
         
         
@@ -153,9 +153,9 @@ class Game:
             new_pos_x = player.robot.x - dx
             new_pos_y = player.robot.y - dy
                 
-        if new_pos_x >= ROBOT_RADIUS and new_pos_x <= ARENA_WIDTH - ROBOT_RADIUS:
+        if new_pos_x >= player.robot.size and new_pos_x <= ARENA_WIDTH - player.robot.size:
             player.robot.x = new_pos_x
-        if new_pos_y >= ROBOT_RADIUS and new_pos_y <= ARENA_HEIGHT - ROBOT_RADIUS:
+        if new_pos_y >= player.robot.size and new_pos_y <= ARENA_HEIGHT - player.robot.size:
             player.robot.y = new_pos_y
             
         if player.keys.q and not player.old_keys.q:
@@ -192,7 +192,6 @@ class Game:
         return projectile.x < -projectile.size or projectile.x > ARENA_WIDTH + projectile.size or projectile.y < -projectile.size or projectile.y > ARENA_HEIGHT + projectile.size
             
     def _check_collisions(self):
-        robot_radius_2 = ROBOT_RADIUS * ROBOT_RADIUS
         for projectile in self.projectiles:
             if projectile.destroy:
                 continue
@@ -201,9 +200,10 @@ class Game:
                 if player.idx == projectile.owner_idx:
                     continue
                 
+                robot_radius_2 = player.robot.size * player.robot.size
                 euclidean_dist = abs(player.robot.x - projectile.x) + abs(player.robot.y - projectile.y)
                 
-                if euclidean_dist < ROBOT_RADIUS * 2:
+                if euclidean_dist < player.robot.size * 2:
                     dist = math.pow(player.robot.x - projectile.x, 2) + math.pow(player.robot.y - projectile.y, 2)
                     if dist < robot_radius_2:
                         projectile.destroy = True
@@ -222,9 +222,7 @@ class Game:
                 player.robot.y,
                 player.robot.angle,
                 player.robot.hp,
-                player.robot.max_hp,
                 player.robot.energy,
-                player.robot.max_energy
             ) 
             for player in self._alive_players()
         ]

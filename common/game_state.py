@@ -7,6 +7,9 @@ from common.robot_hull import RobotHullType
 class PlayerInfo:
     colors: dict[int, tuple[int, int, int]]
     hulls: dict[int, RobotHullType]
+    sizes: dict[int, int]
+    max_hp: dict[int, int]
+    max_energy: dict[int, int]
     
     def __init__(self, ids: list[int]):
         self.colors = {}
@@ -18,6 +21,7 @@ class PlayerInfo:
 class GameState:
     players: list["PlayerState"]
     projectiles: list["ProjectileState"]
+    
 
 @dataclass
 class PlayerState:
@@ -26,9 +30,7 @@ class PlayerState:
     y: int
     angle: float
     hp: int
-    max_hp: int
     energy: int
-    max_energy: int
     
     
 @dataclass

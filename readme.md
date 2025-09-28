@@ -48,6 +48,7 @@ The following table explains each stat, that is currently available:
 |energy_regen|How fast the energy regenerates per second. |0.01|energy/tick|
 |speed|How fast the robot moves. |0.5|px/tick|
 |turn_speed|How fast the robot turns. |0.02|rad/tick|
+|size|How large the robot is. |1|px|
 
   
 Stats are set in the __apply_stats__ function.  
@@ -61,12 +62,16 @@ __Example:__
 |max_energy|40|4|
 |energy_regen|5|0.5|
 |speed|15 |1.5|
-|turn_speed|20 |2|
+|turn_speed|10 |1|
+|size|10 |1|
 
 
 ### Scaling
 The formula for the final stat value for the robot is:  
 `base + custom * scale`
+  
+_Exceptions_  
+size: `base - custom`
 
 __Example:__  
 |Name|Base Stat|Custom Stat|Final Value|
@@ -75,7 +80,8 @@ __Example:__
 |max_energy|100|4|120|
 |energy_regen|0.01|0.5|0.015|
 |speed|5|1.5|5.75|
-|turn_speed|0.01|2|0.05|
+|turn_speed|0.01|1|0.03|
+|size|25|1|24|
 
 
 ## Abilities
