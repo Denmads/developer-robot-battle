@@ -3,7 +3,7 @@ import pickle
 import socket
 import threading
 from time import sleep
-from common.game_state import GameState
+from common.udp_message import GameStateMessage
 from common.robot import RobotInterface
 from common.tcp_messages import ExitTestMessage, InputMessage, Message, PlayerInfoMessage, StartMessage
 from server.game import Game

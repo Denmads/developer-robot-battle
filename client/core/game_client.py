@@ -5,8 +5,9 @@ import threading
 import pygame
 from client.core.game_renderer import GameRenderer
 from client.core.tcp_client import TCPClient
+from client.core.udp_client import UDPClient
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH, UDP_PORT
-from common.game_state import GameState, PlayerInfo
+from common.udp_message import GameStateMessage, PlayerStaticInfoMessage, UDPMessage
 from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage, Message, PlayerInfoMessage, StartMessage
 
 ALLOWED_KEYS = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_a, pygame.K_s, pygame.K_d,
@@ -38,9 +39,7 @@ class GameClient:
             self.udp_port = "6000"
             
         # Setup udp socket
-        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_socket.bind(("0.0.0.0", int(self.udp_port)))
-        threading.Thread(target=self._udp_listener, daemon=True).start()
+        self.udp_client = UDPClient(int(self.udp_port), self._on_udp_message)
         
         # Init pygame
         pygame.init()
@@ -66,19 +65,13 @@ class GameClient:
         self.state = ClientState.NOT_CONNECTED
         self.lobby_info = None
         
-    def _udp_listener(self):
-        while True:
-            data, _ = self.udp_socket.recvfrom(4096)
-            # print(len(data))
-            
-            obj = pickle.loads(data)
-            
-            if isinstance(obj, GameState):
-                self.renderer.state = obj
-            elif isinstance(obj, PlayerInfo):
-                if self.state == ClientState.IN_LOBBY:
-                    self.state = ClientState.IN_GAME
-                self.renderer.static_player_info = obj
+    def _on_udp_message(self, message: UDPMessage):
+        if isinstance(message, GameStateMessage):
+            self.renderer.state = message
+        elif isinstance(message, PlayerStaticInfoMessage):
+            if self.state == ClientState.IN_LOBBY:
+                self.state = ClientState.IN_GAME
+            self.renderer.static_player_info = {p.idx: p for p in message.player_info}
     
     def _run(self):       
         self.running = True
@@ -100,7 +93,7 @@ class GameClient:
             
         pygame.quit()
         self.tcp_client.close()
-        self.udp_socket.close()
+        self.udp_client.close()
 
       
     def _handle_event(self, event: pygame.event.Event):

@@ -1,10 +1,12 @@
+import colorsys
 from dataclasses import dataclass, field
 import math
+import random
 from time import sleep
 from typing import Callable
 
 import pygame
-from common.game_state import GameState, PlayerInfo, PlayerState, ProjectileState
+from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState
 from common.projectile import Projectile
 from common.robot import Robot, RobotBuilder, RobotStats
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH
@@ -73,6 +75,7 @@ class Game:
         
         self.players: dict[str, PlayerInstance] = {}
         
+        player_info: list[PlayerStaticInfo] = []
         for i, player in enumerate(players):
             stats = RobotStats()
             player.robot_configuration.apply_stats(stats)    
@@ -93,16 +96,28 @@ class Game:
                 )
             )
             
-        player_info = PlayerInfo([idx for idx, _ in enumerate(self.players)])
-        player_info.hulls = {p.idx: p.robot.configuration.hull for p in self.players.values()}
-        player_info.sizes = {p.idx: p.robot.size for p in self.players.values()}
-        player_info.max_hp = {p.idx: p.robot.max_hp for p in self.players.values()}
-        player_info.max_energy = {p.idx: p.robot.max_energy for p in self.players.values()}
-        self.send_udp(player_info)
+            player_info.append(PlayerStaticInfo(
+                i,
+                self._get_random_player_color(),
+                builder.hull,
+                self.players[player.id].robot.size,
+                self.players[player.id].robot.max_hp,
+                self.players[player.id].robot.max_energy
+            ))
+            
+        message = PlayerStaticInfoMessage()
+        message.player_info = player_info
+        self.send_udp(message)
         
+    def _get_random_player_color(self) -> tuple[int, int, int]:
+        h,s,l = random.random(), 0.5 + random.random()/2.0, 0.4 + random.random()/5.0
+        return [int(256*i) for i in colorsys.hls_to_rgb(h,l,s)]
         
     def _alive_players(self) -> list[PlayerInstance]:
         return list(filter(lambda p: not p.dead, self.players.values()))
+        
+    def remove_disconnected_player(self, player: Player):
+        del self.players[player.id]
         
     def run(self):
         self.running = True
@@ -121,8 +136,9 @@ class Game:
             self._check_collisions()
             
             self.projectiles = list(filter(lambda p: not p.destroy, self.projectiles))
+            print(f"Projectile count: {len(self.projectiles)}")
                 
-            if not self.is_test and len(self._alive_players()) == 1:
+            if not self.is_test and len(self._alive_players()) <= 1:
                 self.running = False
                 continue
                 
@@ -161,15 +177,11 @@ class Game:
         if player.keys.q and not player.old_keys.q:
             player.robot.ability_func(1)
             
-            # Testing stuff
             if player.robot.energy >= 10:
                 sx = player.robot.x + robot_move_speed * math.cos(player.robot.angle)
                 sy = player.robot.y + robot_move_speed * math.sin(player.robot.angle)
                 self.projectiles.append(Projectile(player.idx, sx, sy, player.robot.angle, 3, 10, 5))
-                
                 player.robot.energy -= 10
-            
-            
         elif player.keys.w and not player.old_keys.w:
             player.robot.ability_func(2)
         elif player.keys.e and not player.old_keys.e:
@@ -212,25 +224,25 @@ class Game:
                         if player.robot.hp <= 0:
                             player.dead = True
             
-    def get_state(self) -> GameState:
-        state = GameState()
+    def get_state(self) -> GameStateMessage:
+        state = GameStateMessage()
         
         state.players = [
             PlayerState(
                 player.idx,
-                player.robot.x,
-                player.robot.y,
+                round(player.robot.x),
+                round(player.robot.y),
                 player.robot.angle,
-                player.robot.hp,
-                player.robot.energy,
+                round(player.robot.hp),
+                round(player.robot.energy),
             ) 
             for player in self._alive_players()
         ]
         
         state.projectiles = [
             ProjectileState(
-                projectile.x,
-                projectile.y,
+                round(projectile.x),
+                round(projectile.y),
                 projectile.angle,
                 projectile.size
             )

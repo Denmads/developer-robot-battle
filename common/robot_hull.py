@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import IntEnum
 
 from common.robot_stats import RobotStats
 
 
-class RobotHullType(Enum):
+class RobotHullType(IntEnum):
     STANDARD = 1
     TOUGH = 2
     SPEEDY = 3

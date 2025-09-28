@@ -28,6 +28,9 @@ class Lobby:
         self.players.remove(player)
         if send_update:
             self._send_lobby_update()
+            
+        if self.game is not None:
+            self.game.remove_disconnected_player(player)
         
     def _send_lobby_update(self):
         message = LobbyInfoMessage([p.id for p in self.players])
