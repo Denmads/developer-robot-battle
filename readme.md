@@ -48,7 +48,7 @@ The following table explains each stat, that is currently available:
 |energy_regen|How fast the energy regenerates per second. |0.01|energy/tick|
 |speed|How fast the robot moves. |0.5|px/tick|
 |turn_speed|How fast the robot turns. |0.02|rad/tick|
-|size|How large the robot is. |1|px|
+|size|How large the robot is. |-1|px|
 
   
 Stats are set in the __apply_stats__ function.  
