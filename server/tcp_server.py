@@ -37,8 +37,12 @@ class TCPServer:
                 if not data:
                     self.disconnect_callback(client_socket)
                     break
-                message = json.loads(data.decode().strip())
-                self.message_callback(client_socket, self.parse_message(message))
+
+                try:
+                    message = json.loads(data.decode().strip())
+                    self.message_callback(client_socket, self.parse_message(message))
+                except:
+                    print(f"Unabled to parse message: {data.decode().strip()}")
         except:
             self.disconnect_callback(client_socket)
 
