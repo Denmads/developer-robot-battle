@@ -45,7 +45,7 @@ class Lobby:
         threading.Thread(target=self.game.run, daemon=True).start()
         
     def stop(self):
-        self._on_game_ended()
+        self.game.stop()
         
     def _on_game_ended(self):
         self._send_lobby_update()
