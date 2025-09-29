@@ -69,9 +69,6 @@ __Example:__
 ### Scaling
 The formula for the final stat value for the robot is:  
 `base + custom * scale`
-  
-_Exceptions_  
-size: `base - custom`
 
 __Example:__  
 |Name|Base Stat|Custom Stat|Final Value|
