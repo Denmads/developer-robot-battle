@@ -7,7 +7,7 @@ from time import sleep
 from typing import Callable
 
 import pygame
-from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState
+from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, WeaponStaticInfo
 from common.projectile import Projectile
 from common.robot import Robot, RobotBuilder, RobotStats
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH
@@ -57,7 +57,7 @@ class PlayerInstance:
 
 class Game:
     
-    def __init__(self, players: list[Player], send_udp: Callable[[object], None], game_ended: Callable[[], None], start_time: datetime, is_test: bool = False):
+    def __init__(self, players: list[Player], send_udp: Callable[[object], None], game_ended: Callable[[int], None], start_time: datetime, is_test: bool = False):
         self.send_udp = send_udp
         self.game_ended_callback = game_ended
         self.is_test = is_test
@@ -104,6 +104,9 @@ class Game:
                 player.color,
                 builder.hull,
                 self.players[player.id].robot.size,
+                [
+                    WeaponStaticInfo(w.normalized_x() * self.players[player.id].robot.size, w.normalized_y() * self.players[player.id].robot.size, w.angle * (math.pi / 180)) 
+                    for w in builder.weapons],
                 self.players[player.id].robot.max_hp,
                 self.players[player.id].robot.max_energy
             ))
@@ -146,7 +149,8 @@ class Game:
             self.send_udp(self.get_state())
             sleep(1 / 20) # 20 updates per second
         
-        self.game_ended_callback()
+        winner = self._alive_players()[0].idx if len(self._alive_players()) > 0 else -1
+        self.game_ended_callback(winner)
         
     def _update_from_input(self, player: PlayerInstance):
         robot_move_speed = player.robot.hull.speed + player.robot.stats.speed * 0.5
@@ -171,14 +175,14 @@ class Game:
             new_pos_y = player.robot.y - dy
                 
         if new_pos_x < player.robot.size:
-            new_pos_x = player.robot.x + (player.robot.x - player.robot.size) * math.cos(player.robot.angle)
+            new_pos_x = player.robot.x + (player.robot.x - player.robot.size) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
         elif new_pos_x > ARENA_WIDTH - player.robot.size:
-            new_pos_x = player.robot.x + ((ARENA_WIDTH - player.robot.size) - player.robot.x) * math.cos(player.robot.angle)
+            new_pos_x = player.robot.x + ((ARENA_WIDTH - player.robot.size) - player.robot.x) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
 
         if new_pos_y < player.robot.size:
-            new_pos_y = player.robot.y + (player.robot.y - player.robot.size) * math.sin(player.robot.angle)
+            new_pos_y = player.robot.y + (player.robot.y - player.robot.size) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
         elif new_pos_y > ARENA_HEIGHT - player.robot.size:
-            new_pos_y = player.robot.y + ((ARENA_HEIGHT - player.robot.size) - player.robot.y) * math.sin(player.robot.angle)
+            new_pos_y = player.robot.y + ((ARENA_HEIGHT - player.robot.size) - player.robot.y) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
 
         player.robot.x = new_pos_x
         player.robot.y = new_pos_y

@@ -32,6 +32,10 @@ class PlayerStaticInfoMessage(UDPMessage):
         for p in self.player_info:
             buf += struct.pack(PlayerStaticInfo.struct_format, p.idx, p.color[0], p.color[1], p.color[2], p.hull, p.size, p.max_hp, p.max_energy)
             
+            buf += struct.pack("<H", len(p.weapons))
+            for w in p.weapons:
+                buf += struct.pack(WeaponStaticInfo.struct_format, w.x_offset, w.y_offset, w.angle)
+            
         return bytes(buf)
     
     @staticmethod
@@ -45,8 +49,19 @@ class PlayerStaticInfoMessage(UDPMessage):
         for _ in range(num_players):
             idx, r, g, b, hull, size, max_hp, max_energy \
                 = struct.unpack_from(PlayerStaticInfo.struct_format, data, offset)
-            info.player_info.append(PlayerStaticInfo(idx, (r, g, b), hull, size, max_hp, max_energy))
             offset += struct.calcsize(PlayerStaticInfo.struct_format)
+            
+            num_weapons, = struct.unpack_from("<H", data, offset)
+            offset += 2
+            weapons: list[WeaponStaticInfo] = []
+            for _ in range(num_weapons):
+                x_offset, y_offset, angle = struct.unpack_from(WeaponStaticInfo.struct_format, data, offset)
+                offset += struct.calcsize(WeaponStaticInfo.struct_format)
+                weapons.append(WeaponStaticInfo(x_offset, y_offset, angle))
+            
+            info.player_info.append(PlayerStaticInfo(idx, (r, g, b), hull, size, weapons, max_hp, max_energy))
+            
+            
         
         return info
 
@@ -58,8 +73,18 @@ class PlayerStaticInfo:
     color: tuple[int, int, int]
     hull: RobotHullType
     size: int
+    weapons: list["WeaponStaticInfo"]
+    
     max_hp: int
     max_energy: int
+    
+@dataclass
+class WeaponStaticInfo:
+    struct_format: str = field(default="<fff", init=False)
+    
+    x_offset: int
+    y_offset: int
+    angle: float
 
 
 class GameStateMessage(UDPMessage):

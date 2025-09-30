@@ -1,12 +1,13 @@
 from datetime import datetime
 from enum import Enum
+import threading
 import pygame
 from client.core.game_renderer import GameRenderer
 from client.core.tcp_client import TCPClient
 from client.core.udp_client import UDPClient
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH, UDP_PORT
 from common.udp_message import GameStateMessage, PlayerStaticInfoMessage, UDPMessage
-from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage, Message, PlayerInfoMessage, RoundStartedMessage, StartRoundMessage
+from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage, LobbyJoinedMessage, Message, PlayerInfoMessage, RoundEndedMessage, RoundStartedMessage, StartRoundMessage
 
 ALLOWED_KEYS = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_a, pygame.K_s, pygame.K_d,
                 pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]
@@ -57,10 +58,20 @@ class GameClient:
     def _on_tcp_message(self, message: Message):
         if isinstance(message, LobbyInfoMessage):
             self.lobby_info = message
+        if isinstance(message, LobbyJoinedMessage):
             self.state = ClientState.IN_LOBBY
         elif isinstance(message, RoundStartedMessage):
-            print(f"Start: {datetime.fromisoformat(message.begin_time)} | Now: {datetime.now()}")
             self.renderer.round_start_time = datetime.fromisoformat(message.begin_time)
+        elif isinstance(message, RoundEndedMessage):
+            if len(message.winner_id) > 0:
+                self.renderer.round_winner = message.winner_id 
+                threading.Timer(3.0, self._go_to_lobby).start()
+            else:
+                self._go_to_lobby()
+          
+    def _go_to_lobby(self):
+        self.state = ClientState.IN_LOBBY
+        self.renderer.round_winner = None
             
     def _on_tcp_disconnect(self):
         self.state = ClientState.NOT_CONNECTED

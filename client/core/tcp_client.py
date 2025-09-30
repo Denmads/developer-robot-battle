@@ -5,7 +5,7 @@ import socket
 import threading
 from typing import Callable
 
-from common.tcp_messages import LobbyInfoMessage, Message, RoundStartedMessage
+from common.tcp_messages import LobbyInfoMessage, LobbyJoinedMessage, Message, RoundEndedMessage, RoundStartedMessage
 
 class TCPClient:
     def __init__(self, message_callback: Callable[[Message], None], disconnect_callback: Callable[[], None], host="127.0.0.1", port=5000):
@@ -47,6 +47,10 @@ class TCPClient:
             return LobbyInfoMessage(**message)
         elif message_type == 6:
             return RoundStartedMessage(**message)
+        elif message_type == 7:
+            return RoundEndedMessage(**message)
+        elif message_type == 8:
+            return LobbyJoinedMessage(**message)
 
     def send(self, message: object):
         self.client_socket.sendall(json.dumps(dataclasses.asdict(message)).encode())

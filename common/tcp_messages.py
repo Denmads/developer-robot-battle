@@ -34,6 +34,14 @@ class RoundStartedMessage(Message):
     message_type: int = field(default=6, init=False)
     begin_time: str
 
+@dataclass
+class RoundEndedMessage(Message):
+    message_type: int = field(default=7, init=False)
+    winner_id: str
+    
+@dataclass
+class LobbyJoinedMessage(Message):
+    message_type: int = field(default=8, init=False)
     
     
 # Server -> Client

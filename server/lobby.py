@@ -5,7 +5,7 @@ import threading
 from typing import Callable
 
 from common.robot import RobotInterface
-from common.tcp_messages import LobbyInfoMessage, RoundStartedMessage
+from common.tcp_messages import LobbyInfoMessage, LobbyJoinedMessage, RoundEndedMessage, RoundStartedMessage
 from server.game import Game
 from server.player import Player
 from server.udp_socket import UDPSocket
@@ -24,6 +24,7 @@ class Lobby:
     def add_player(self, player: Player):
         self.players.append(player)
         self._send_lobby_update()
+        player.sender.send(LobbyJoinedMessage())
             
     def remove_player(self, player: Player, send_update: bool = True):
         self.players.remove(player)
@@ -36,7 +37,7 @@ class Lobby:
     def _send_lobby_update(self):
         message = LobbyInfoMessage({p.id: p.color for p in self.players})
         for player in self.players:
-            player.socket.sendall(json.dumps(dataclasses.asdict(message)).encode())
+            player.sender.send(message)
             
     def is_started(self) -> bool:
         return self.game is not None
@@ -45,8 +46,7 @@ class Lobby:
         start_time = datetime.datetime.now() + datetime.timedelta(0, 3)
         message = RoundStartedMessage(start_time.isoformat())
         for player in self.players:
-            print("Player - " + player.id)
-            player.socket.sendall(json.dumps(dataclasses.asdict(message)).encode())
+            player.sender.send(message)
 
         self.game = Game(self.players, self.udp_socket.send_to_all, self._on_game_ended, start_time, is_test)
         threading.Thread(target=self.game.run, daemon=True).start()
@@ -54,7 +54,12 @@ class Lobby:
     def stop(self):
         self.game.stop()
         
-    def _on_game_ended(self):
-        self._send_lobby_update()
+    def _on_game_ended(self, winner_idx: int):
+        winner = self.players[winner_idx]
+        message = RoundEndedMessage(winner.id)
+        for player in self.players:
+            player.sender.send(message)        
+        
+        # self._send_lobby_update()
         self.game = None
         self.game_ended()

@@ -9,6 +9,7 @@ from common.tcp_messages import ExitTestMessage, InputMessage, Message, PlayerIn
 from server.game import Game
 from server.lobby import Lobby
 from server.player import Player
+from server.tcp_sender import TcpSender
 from server.tcp_server import TCPServer
 from server.udp_socket import UDPSocket
 
@@ -44,7 +45,7 @@ class GameServer:
             player = Player(
                 message.id, 
                 message.udp_port, 
-                socket, 
+                TcpSender(socket), 
                 robot)
             self.socket_player_dict[socket] = player
             self.lobby.add_player(player)

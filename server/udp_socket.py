@@ -19,7 +19,7 @@ class UDPSocket:
         packets = self._split_into_packets(data)
         
         for player in self.players.values():
-            ip, _ = player.socket.getpeername()
+            ip, _ = player.sender.socket.getpeername()
             for packet in packets:
                 self.socket.sendto(packet, (ip, player.udp_port))
             

@@ -3,10 +3,12 @@ from typing import Callable
 
 from common.robot_hull import RobotHullType, get_hull_instance
 from common.robot_stats import RobotStats
+from common.weapon import Weapon
 
 @dataclass
 class RobotBuilder:
     hull: RobotHullType = field(default=RobotHullType.STANDARD)
+    weapons: list[Weapon] = field(default_factory=list)
 
 
 class RobotInterface:
