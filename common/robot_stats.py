@@ -13,19 +13,29 @@ class RobotStats:
     turn_speed: float = field(default=1)
     size: float = field(default=1)
     
+    def make_allowable(self):
+        if math.isinf(self.max_health) or math.isnan(self.max_health):
+            self.max_health = 1 
+        if math.isinf(self.max_energy) or math.isnan(self.max_energy):
+            self.max_energy = 1
+        if math.isinf(self.energy_regen) or math.isnan(self.energy_regen):
+            self.energy_regen = 1
+        if math.isinf(self.speed) or math.isnan(self.speed):
+            self.speed = 1
+        if math.isinf(self.turn_speed) or math.isnan(self.turn_speed):
+            self.turn_speed = 1
+        if math.isinf(self.size) or math.isnan(self.size):
+            self.size = 1
+
+        self.max_health = abs(self.max_health)
+        self.max_energy = abs(self.max_energy)
+        self.energy_regen = abs(self.energy_regen)
+        self.speed = abs(self.speed)
+        self.turn_speed = abs(self.turn_speed)
+        self.size = abs(self.size)
+
     def normalize(self):
-        if math.isinf(self.max_health):
-            self.max_health = 1000000
-        if math.isinf(self.max_energy):
-            self.max_energy = 1000000
-        if math.isinf(self.energy_regen):
-            self.energy_regen = 1000000
-        if math.isinf(self.speed):
-            self.speed = 1000000
-        if math.isinf(self.turn_speed):
-            self.turn_speed = 1000000
-        if math.isinf(self.size):
-            self.size = 1000000
+        
 
         total = self.max_health + self.max_energy + self.energy_regen + self.speed + self.turn_speed + self.size
         scale = TOTAL_STAT_POINTS / total

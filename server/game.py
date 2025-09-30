@@ -136,7 +136,6 @@ class Game:
             self._check_collisions()
             
             self.projectiles = list(filter(lambda p: not p.destroy, self.projectiles))
-            print(f"Projectile count: {len(self.projectiles)}")
                 
             if not self.is_test and len(self._alive_players()) <= 1:
                 self.running = False
