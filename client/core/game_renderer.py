@@ -1,6 +1,8 @@
+from datetime import datetime
 import math
 import pygame
 
+from common.constants import ARENA_HEIGHT, ARENA_WIDTH
 from common.udp_message import GameStateMessage, PlayerStaticInfo
 
 
@@ -9,6 +11,10 @@ class GameRenderer:
     def __init__(self):
         self.state: GameStateMessage = None
         self.static_player_info: dict[int, PlayerStaticInfo] = None
+        self.round_start_time: datetime = None
+
+        pygame.font.init()
+        self.countdown_font = pygame.font.SysFont("Arial", 72)
         
     def render(self, screen: pygame.Surface):
         if self.state is None:
@@ -17,6 +23,8 @@ class GameRenderer:
         self._draw_players(screen)
         self._draw_projectiles(screen)
         self._draw_player_health_and_energy_bars(screen)
+
+        self._render_countdown_timer(screen)
         
     def _draw_players(self, screen: pygame.Surface):
         for player in self.state.players:
@@ -51,7 +59,7 @@ class GameRenderer:
     def _draw_player_health_and_energy_bars(self, screen: pygame.Surface):
         for player in self.state.players:
             player_info = self.static_player_info[player.idx]
-            bar_width = player_info.size * 2
+            bar_width = 50
             bar_height = 5
             bar_offset = player_info.size + 10 + bar_height
             
@@ -73,3 +81,9 @@ class GameRenderer:
                 player.y - bar_offset,
                 bar_width * (player.energy / player_info.max_energy), bar_height
             ))
+
+    def _render_countdown_timer(self, screen: pygame.Surface):
+        if self.round_start_time is not None and self.round_start_time > datetime.now():
+            seconds_to_start = math.ceil((self.round_start_time - datetime.now()).total_seconds())
+            countdown_surface = self.countdown_font.render(str(seconds_to_start), True, (255, 255, 255))
+            screen.blit(countdown_surface, (ARENA_WIDTH / 2 - countdown_surface.get_width() / 2, ARENA_HEIGHT / 2 - countdown_surface.get_height() / 2 ))

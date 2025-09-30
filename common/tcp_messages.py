@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import datetime
 
 class Message:
     pass
@@ -20,13 +21,19 @@ class PlayerInfoMessage(Message):
     robot_code: str
     
 @dataclass
-class StartMessage(Message):
+class StartRoundMessage(Message):
     message_type: int = field(default=3, init=False)
     is_test: bool = field(default=False)
     
 @dataclass
 class ExitTestMessage(Message):
     message_type: int = field(default=5, init=False)
+
+@dataclass
+class RoundStartedMessage(Message):
+    message_type: int = field(default=6, init=False)
+    begin_time: str
+
     
     
 # Server -> Client

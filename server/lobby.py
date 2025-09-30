@@ -1,10 +1,11 @@
 import dataclasses
+import datetime
 import json
 import threading
 from typing import Callable
 
 from common.robot import RobotInterface
-from common.tcp_messages import LobbyInfoMessage
+from common.tcp_messages import LobbyInfoMessage, RoundStartedMessage
 from server.game import Game
 from server.player import Player
 from server.udp_socket import UDPSocket
@@ -41,7 +42,13 @@ class Lobby:
         return self.game is not None
     
     def start(self, is_test: bool):
-        self.game = Game(self.players, self.udp_socket.send_to_all, self._on_game_ended, is_test)
+        start_time = datetime.datetime.now() + datetime.timedelta(0, 3)
+        message = RoundStartedMessage(start_time.isoformat())
+        for player in self.players:
+            print("Player - " + player.id)
+            player.socket.sendall(json.dumps(dataclasses.asdict(message)).encode())
+
+        self.game = Game(self.players, self.udp_socket.send_to_all, self._on_game_ended, start_time, is_test)
         threading.Thread(target=self.game.run, daemon=True).start()
         
     def stop(self):

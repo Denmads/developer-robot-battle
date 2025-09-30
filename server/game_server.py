@@ -5,7 +5,7 @@ import threading
 from time import sleep
 from common.udp_message import GameStateMessage
 from common.robot import RobotInterface
-from common.tcp_messages import ExitTestMessage, InputMessage, Message, PlayerInfoMessage, StartMessage
+from common.tcp_messages import ExitTestMessage, InputMessage, Message, PlayerInfoMessage, StartRoundMessage
 from server.game import Game
 from server.lobby import Lobby
 from server.player import Player
@@ -49,7 +49,7 @@ class GameServer:
             self.socket_player_dict[socket] = player
             self.lobby.add_player(player)
             
-        elif isinstance(message, StartMessage):
+        elif isinstance(message, StartRoundMessage):
             if not self.lobby.is_started():
                 print("Starting...", flush=True)
                 self.tcpServer.stop() # stops accepting new connections

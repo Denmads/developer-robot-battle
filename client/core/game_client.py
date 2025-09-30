@@ -1,14 +1,12 @@
+from datetime import datetime
 from enum import Enum
-import pickle
-import socket
-import threading
 import pygame
 from client.core.game_renderer import GameRenderer
 from client.core.tcp_client import TCPClient
 from client.core.udp_client import UDPClient
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH, UDP_PORT
 from common.udp_message import GameStateMessage, PlayerStaticInfoMessage, UDPMessage
-from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage, Message, PlayerInfoMessage, StartMessage
+from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage, Message, PlayerInfoMessage, RoundStartedMessage, StartRoundMessage
 
 ALLOWED_KEYS = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_a, pygame.K_s, pygame.K_d,
                 pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]
@@ -60,6 +58,9 @@ class GameClient:
         if isinstance(message, LobbyInfoMessage):
             self.lobby_info = message
             self.state = ClientState.IN_LOBBY
+        elif isinstance(message, RoundStartedMessage):
+            print(f"Start: {datetime.fromisoformat(message.begin_time)} | Now: {datetime.now()}")
+            self.renderer.round_start_time = datetime.fromisoformat(message.begin_time)
             
     def _on_tcp_disconnect(self):
         self.state = ClientState.NOT_CONNECTED
@@ -107,10 +108,10 @@ class GameClient:
                     self.tcp_client.send(PlayerInfoMessage(self.id, int(self.udp_port), f.read()))
         elif self.state == ClientState.IN_LOBBY:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_KP_ENTER:
-                self.tcp_client.send(StartMessage())
+                self.tcp_client.send(StartRoundMessage())
             if event.type == pygame.KEYDOWN and event.key == pygame.K_t:
                 self.state = ClientState.IN_TEST
-                self.tcp_client.send(StartMessage(is_test=True))
+                self.tcp_client.send(StartRoundMessage(is_test=True))
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_DELETE:
                 self.tcp_client.close()
                 self.state = ClientState.NOT_CONNECTED

@@ -1,5 +1,6 @@
 import colorsys
 from dataclasses import dataclass, field
+from datetime import datetime
 import math
 import random
 from time import sleep
@@ -56,10 +57,11 @@ class PlayerInstance:
 
 class Game:
     
-    def __init__(self, players: list[Player], send_udp: Callable[[object], None], game_ended: Callable[[], None], is_test: bool = False):
+    def __init__(self, players: list[Player], send_udp: Callable[[object], None], game_ended: Callable[[], None], start_time: datetime, is_test: bool = False):
         self.send_udp = send_udp
         self.game_ended_callback = game_ended
         self.is_test = is_test
+        self.start_time = start_time
         
         self._initialize_players(players)
         
@@ -120,24 +122,26 @@ class Game:
     def run(self):
         self.running = True
         while self.running:
-            for player in self._alive_players():
+            if datetime.now() > self.start_time:
+
+                for player in self._alive_players():
+                    
+                    self._update_from_input(player)
+                    player.old_keys = player.keys.clone()
+                    self._update_player(player)
+                    
+                for projectile in self.projectiles:
+                    self._update_projectile(projectile)
+                    
+                for p in list(filter(self._is_outside_screen, self.projectiles)):
+                    p.destroy = True
+                self._check_collisions()
                 
-                self._update_from_input(player)
-                player.old_keys = player.keys.clone()
-                self._update_player(player)
-                
-            for projectile in self.projectiles:
-                self._update_projectile(projectile)
-                
-            for p in list(filter(self._is_outside_screen, self.projectiles)):
-                p.destroy = True
-            self._check_collisions()
-            
-            self.projectiles = list(filter(lambda p: not p.destroy, self.projectiles))
-                
-            if not self.is_test and len(self._alive_players()) <= 1:
-                self.running = False
-                continue
+                self.projectiles = list(filter(lambda p: not p.destroy, self.projectiles))
+                    
+                if not self.is_test and len(self._alive_players()) <= 1:
+                    self.running = False
+                    continue
                 
             self.send_udp(self.get_state())
             sleep(1 / 20) # 20 updates per second

@@ -69,7 +69,7 @@ class TCPServer:
         elif message_type == 2:
             return tm.PlayerInfoMessage(**message)
         elif message_type == 3:
-            return tm.StartMessage(**message)
+            return tm.StartRoundMessage(**message)
         elif message_type == 5:
             return tm.ExitTestMessage()
 
