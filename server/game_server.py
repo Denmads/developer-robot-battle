@@ -41,7 +41,11 @@ class GameServer:
         if isinstance(message, PlayerInfoMessage):
             print(f"Player connected '{message.id}'", flush=True)
             robot = self._parse_robot(message.robot_code)
-            player = Player(message.id, message.udp_port, socket, robot)
+            player = Player(
+                message.id, 
+                message.udp_port, 
+                socket, 
+                robot)
             self.socket_player_dict[socket] = player
             self.lobby.add_player(player)
             

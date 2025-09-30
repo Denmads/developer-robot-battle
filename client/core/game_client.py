@@ -132,26 +132,26 @@ class GameClient:
         self._render_text_top_left_at("Players:", 50, 50, self.font_header)
         
         player_spacing = self.font_text.get_height() + 10
-        for i, id in enumerate(self.lobby_info.player_ids):
-            self._render_text_top_left_at(f"- {id}", 75, 75 + i * player_spacing, self.font_text)
+        for i, (id, color) in enumerate(self.lobby_info.players.items()):
+            self._render_text_top_left_at(f"- {id}", 75, 75 + i * player_spacing, self.font_text, color)
             
         self._render_text_bottom_right_at("KP Enter - Start", ARENA_WIDTH - 50, ARENA_HEIGHT - 114, self.font_text)
         self._render_text_bottom_right_at("T - Start Test", ARENA_WIDTH - 50, ARENA_HEIGHT - 82, self.font_text)
         self._render_text_bottom_right_at("Delete   - Disconnect", ARENA_WIDTH - 50, ARENA_HEIGHT - 50, self.font_text)
     
-    def _render_text_center_at(self, text: str, x: float, y: float, font: pygame.font.Font):
-        text_surface = font.render(text, True, (255, 255, 255))
+    def _render_text_center_at(self, text: str, x: float, y: float, font: pygame.font.Font, color: tuple[int, int, int] = (255, 255, 255)):
+        text_surface = font.render(text, True, color)
         self.screen.blit(text_surface, (
             x - text_surface.get_width() / 2, 
             y - text_surface.get_height() / 2
         ))
         
-    def _render_text_top_left_at(self, text: str, x: float, y: float, font: pygame.font.Font):
-        text_surface = font.render(text, True, (255, 255, 255))
+    def _render_text_top_left_at(self, text: str, x: float, y: float, font: pygame.font.Font, color: tuple[int, int, int] = (255, 255, 255)):
+        text_surface = font.render(text, True, color)
         self.screen.blit(text_surface, (x, y))
         
-    def _render_text_bottom_right_at(self, text: str, x: float, y: float, font: pygame.font.Font):
-        text_surface = font.render(text, True, (255, 255, 255))
+    def _render_text_bottom_right_at(self, text: str, x: float, y: float, font: pygame.font.Font, color: tuple[int, int, int] = (255, 255, 255)):
+        text_surface = font.render(text, True, color)
         self.screen.blit(text_surface, (
             x - text_surface.get_width(), 
             y -text_surface.get_height() 

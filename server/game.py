@@ -79,6 +79,7 @@ class Game:
         for i, player in enumerate(players):
             stats = RobotStats()
             player.robot_configuration.apply_stats(stats)    
+            stats.make_allowable()
             stats.normalize()
             
             builder = RobotBuilder()
@@ -98,7 +99,7 @@ class Game:
             
             player_info.append(PlayerStaticInfo(
                 i,
-                self._get_random_player_color(),
+                player.color,
                 builder.hull,
                 self.players[player.id].robot.size,
                 self.players[player.id].robot.max_hp,
@@ -109,9 +110,6 @@ class Game:
         message.player_info = player_info
         self.send_udp(message)
         
-    def _get_random_player_color(self) -> tuple[int, int, int]:
-        h,s,l = random.random(), 0.5 + random.random()/2.0, 0.4 + random.random()/5.0
-        return [int(256*i) for i in colorsys.hls_to_rgb(h,l,s)]
         
     def _alive_players(self) -> list[PlayerInstance]:
         return list(filter(lambda p: not p.dead, self.players.values()))

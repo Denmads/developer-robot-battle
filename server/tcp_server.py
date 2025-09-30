@@ -1,9 +1,12 @@
 import json
 import socket
 import threading
+import traceback
 from typing import Callable
 from common import tcp_messages as tm
 import re
+import logging
+
 class TCPServer:
     def __init__(self, message_callback: Callable[[socket.socket, tm.Message], None], disconnect_callback: Callable[[socket.socket], None], host="0.0.0.0", port=5000):
         self.host = host
@@ -40,7 +43,7 @@ class TCPServer:
                     break
 
                 try:
-                    data_str = data.decode().strip().split()
+                    data_str = data.decode().strip()
                     split_indicies = [m.start() for m in re.finditer('}{', data_str)]
                     split_indicies.insert(0, 0)
                     split_indicies.append(len(data_str))
@@ -50,8 +53,10 @@ class TCPServer:
                     for message_data in messages:
                         message = json.loads(message_data)
                         self.message_callback(client_socket, self.parse_message(message))
-                except:
+                except Exception as ex:
                     print(f"Unabled to parse message: {data.decode().strip()}")
+                    logger = logging.getLogger(__name__)
+                    logger.exception(ex)
         except:
             self.disconnect_callback(client_socket)
 

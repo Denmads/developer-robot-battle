@@ -33,4 +33,4 @@ class ExitTestMessage(Message):
 @dataclass
 class LobbyInfoMessage(Message):
     message_type: int = field(default=4, init=False)
-    player_ids: list[str]
+    players: dict[str, tuple[int, int, int]]

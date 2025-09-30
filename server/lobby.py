@@ -33,7 +33,7 @@ class Lobby:
             self.game.remove_disconnected_player(player)
         
     def _send_lobby_update(self):
-        message = LobbyInfoMessage([p.id for p in self.players])
+        message = LobbyInfoMessage({p.id: p.color for p in self.players})
         for player in self.players:
             player.socket.sendall(json.dumps(dataclasses.asdict(message)).encode())
             
