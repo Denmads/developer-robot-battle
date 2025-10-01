@@ -36,29 +36,39 @@ class TCPServer:
 
     def handle_client(self, client_socket: socket.socket):
         try:
+            buffer: bytes = bytearray()
             while True:
                 data = client_socket.recv(1024)
                 if not data:
                     self.disconnect_callback(client_socket)
                     break
 
-                try:
-                    data_str = data.decode().strip()
-                    split_indicies = [m.start() for m in re.finditer('}{', data_str)]
-                    split_indicies.insert(0, 0)
-                    split_indicies.append(len(data_str))
+                buffer += data
 
-                    messages = [data_str[split_indicies[i]:split_indicies[i+1]+1] for i in range(len(split_indicies)-1)]
+                while self._buffer_has_full_message(buffer):
+                    self._handle_message_in_buffer(client_socket, buffer)
 
-                    for message_data in messages:
-                        message = json.loads(message_data)
-                        self.message_callback(client_socket, self.parse_message(message))
-                except Exception as ex:
-                    print(f"Unabled to parse message: {data.decode().strip()}")
-                    logger = logging.getLogger(__name__)
-                    logger.exception(ex)
         except:
             self.disconnect_callback(client_socket)
+
+    def _buffer_has_full_message(self, buffer: bytearray) -> bool:
+        return buffer.find(2) != -1 and buffer.find(3) != -1
+
+    def _handle_message_in_buffer(self, socket: socket.socket, buffer: bytearray):
+        try:
+            stx_index = buffer.find(2)
+            etx_index = buffer.find(3)
+            
+            data = buffer[stx_index+1:etx_index]
+            del buffer[:etx_index+1]
+            
+            message_data = data.decode().strip()
+            message = json.loads(message_data)
+            self.message_callback(socket, self.parse_message(message))
+        except Exception as ex:
+            print(f"Unabled to parse message: {data.decode().strip()}")
+            logger = logging.getLogger(__name__)
+            logger.exception(ex)
 
     def parse_message(self, message):
         message_type = message["message_type"]

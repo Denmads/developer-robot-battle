@@ -129,11 +129,11 @@ class GameStateMessage(UDPMessage):
 
 @dataclass
 class PlayerState:
-    struct_format: str = field(default="<HhhfHH", init=False)
+    struct_format: str = field(default="<HfffHH", init=False)
     
     idx: int
-    x: int
-    y: int
+    x: float
+    y: float
     angle: float
     hp: int
     energy: int
@@ -141,9 +141,9 @@ class PlayerState:
     
 @dataclass
 class ProjectileState:
-    struct_format: str = field(default="<hhfH", init=False)
+    struct_format: str = field(default="<fffH", init=False)
     
-    x: int
-    y: int
+    x: float
+    y: float
     angle: float
     size: int

@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
+import math
 from typing import Callable
 
 from common.robot_hull import RobotHullType, get_hull_instance
 from common.robot_stats import RobotStats
-from common.weapon import Weapon
+from common.weapon import Weapon, WeaponCommand
 
 @dataclass
 class RobotBuilder:
@@ -19,7 +20,7 @@ class RobotInterface:
     def apply_stats(self, stats: RobotStats) -> None:
         pass
 
-    def do_ability(self, index: int) -> None:
+    def do_ability(self, index: int, command_list: list[WeaponCommand]) -> None:
         pass
     
 
@@ -46,3 +47,8 @@ class Robot:
         self.max_energy = self.hull.max_energy + round(self.stats.max_energy * 5)
         self.energy = self.max_energy
         self.energy_regen = self.hull.energy_regen + self.stats.energy_regen * 0.01
+        
+        self.weapons = {
+            w.id: Weapon(w.id, w.normalized_x() * self.size, w.normalized_y() * self.size, w.angle * (math.pi / 180))
+            for w in configuration.weapons
+        }

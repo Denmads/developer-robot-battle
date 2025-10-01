@@ -2,6 +2,7 @@ from datetime import datetime
 import math
 import pygame
 
+from common.calculations import calculate_weapon_point_offset
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH
 from common.udp_message import GameStateMessage, PlayerState, PlayerStaticInfo, WeaponStaticInfo
 
@@ -60,34 +61,13 @@ class GameRenderer:
             pygame.draw.aalines(screen, (100, 100, 100), True, points)
             
             # DRAW WEAPONS
-            pygame.draw.circle(screen, (255, 255, 255), (ARENA_WIDTH / 2, ARENA_HEIGHT / 2), 3)
             for weapon in player_info.weapons:
-                transformed_points = self._calculate_weapon_points(player, weapon)
+                transformed_points = [
+                    calculate_weapon_point_offset((player.x, player.y), player.angle, (weapon.x_offset, weapon.y_offset), weapon.angle, point)
+                    for point in self.weapon_shape_points
+                ]
                 pygame.draw.polygon(screen, (150, 150, 150), transformed_points)
-                # pygame.draw.aalines(screen, (150, 150, 150), True, transformed_points)
-      
-    def _calculate_weapon_points(self, player: PlayerState, weapon: WeaponStaticInfo) -> list[tuple[float, float]]:
-        def rot(vx, vy, a):
-            cs = math.cos(a)
-            sn = math.sin(a)
-            return vx * cs - vy * sn, vx * sn + vy * cs
-        
-        wo_rx, wo_ry = rot(weapon.x_offset, weapon.y_offset, player.angle)
-        
-        weapon_base_x = player.x + wo_rx
-        weapon_base_y = player.y + wo_ry
-        
-        cs = math.cos(player.angle + weapon.angle)
-        sn = math.sin(player.angle + weapon.angle)
-        
-        return [
-            (
-                point[0] * cs - point[1] * sn + weapon_base_x,
-                point[0] * sn + point[1] * cs + weapon_base_y
-            )
-            for point in self.weapon_shape_points
-        ]
-            
+                
             
     def _draw_projectiles(self, screen: pygame.Surface):
         for projectile in self.state.projectiles:

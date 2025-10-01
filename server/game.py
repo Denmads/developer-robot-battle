@@ -7,10 +7,12 @@ from time import sleep
 from typing import Callable
 
 import pygame
+from common.calculations import calculate_weapon_point_offset
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, WeaponStaticInfo
 from common.projectile import Projectile
 from common.robot import Robot, RobotBuilder, RobotStats
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH
+from common.weapon import WeaponCommand
 from server.player import Player
 
 
@@ -63,6 +65,8 @@ class Game:
         self.is_test = is_test
         self.start_time = start_time
         
+        self.player_commands: dict[int, list[WeaponCommand]] = {}
+        
         self._initialize_players(players)
         
         self.projectiles: list[Projectile] = []
@@ -79,6 +83,8 @@ class Game:
         
         player_info: list[PlayerStaticInfo] = []
         for i, player in enumerate(players):
+            self.player_commands[i] = []
+            
             stats = RobotStats()
             player.robot_configuration.apply_stats(stats)    
             stats.make_allowable()
@@ -105,8 +111,8 @@ class Game:
                 builder.hull,
                 self.players[player.id].robot.size,
                 [
-                    WeaponStaticInfo(w.normalized_x() * self.players[player.id].robot.size, w.normalized_y() * self.players[player.id].robot.size, w.angle * (math.pi / 180)) 
-                    for w in builder.weapons],
+                    WeaponStaticInfo(w.x, w.y, w.angle) 
+                    for w in self.players[player.id].robot.weapons.values()],
                 self.players[player.id].robot.max_hp,
                 self.players[player.id].robot.max_energy
             ))
@@ -127,14 +133,14 @@ class Game:
         while self.running:
             if datetime.now() > self.start_time:
 
+                for projectile in self.projectiles:
+                    self._update_projectile(projectile)
+
                 for player in self._alive_players():
                     
                     self._update_from_input(player)
                     player.old_keys = player.keys.clone()
-                    self._update_player(player)
-                    
-                for projectile in self.projectiles:
-                    self._update_projectile(projectile)
+                    self._update_player(player)    
                     
                 for p in list(filter(self._is_outside_screen, self.projectiles)):
                     p.destroy = True
@@ -187,27 +193,45 @@ class Game:
         player.robot.x = new_pos_x
         player.robot.y = new_pos_y
             
-        if player.keys.q and not player.old_keys.q:
-            player.robot.ability_func(1)
+        new_commands: list[WeaponCommand] = []
+        if player.keys.q and not player.old_keys.q and player.robot.energy > 10:
+            player.robot.ability_func(1, new_commands)
+            player.robot.energy -= 10
+        elif player.keys.w and not player.old_keys.w and player.robot.energy > 10:
+            player.robot.ability_func(2, new_commands)
+            player.robot.energy -= 10
+        elif player.keys.e and not player.old_keys.e and player.robot.energy > 10:
+            player.robot.ability_func(3, new_commands)
+            player.robot.energy -= 10
+        elif player.keys.a and not player.old_keys.a and player.robot.energy > 10:
+            player.robot.ability_func(4, new_commands)
+            player.robot.energy -= 10
+        elif player.keys.s and not player.old_keys.s and player.robot.energy > 10:
+            player.robot.ability_func(5, new_commands)
+            player.robot.energy -= 10
+        elif player.keys.d and not player.old_keys.d and player.robot.energy > 10:
+            player.robot.ability_func(6, new_commands)
+            player.robot.energy -= 10
             
-            if player.robot.energy >= 10:
-                sx = player.robot.x + robot_move_speed * math.cos(player.robot.angle)
-                sy = player.robot.y + robot_move_speed * math.sin(player.robot.angle)
-                self.projectiles.append(Projectile(player.idx, sx, sy, player.robot.angle, 3, 10, 5))
-                player.robot.energy -= 10
-        elif player.keys.w and not player.old_keys.w:
-            player.robot.ability_func(2)
-        elif player.keys.e and not player.old_keys.e:
-            player.robot.ability_func(3)
-        elif player.keys.a and not player.old_keys.a:
-            player.robot.ability_func(4)
-        elif player.keys.s and not player.old_keys.s:
-            player.robot.ability_func(5)
-        elif player.keys.d and not player.old_keys.d:
-            player.robot.ability_func(6)
+        for command in new_commands:
+            command.time = datetime.now()
+            
+        self.player_commands[player.idx] += new_commands
             
     def _update_player(self, player: PlayerInstance):
         player.robot.energy = math.ceil(min(player.robot.max_energy, player.robot.energy + player.robot.energy_regen))
+        
+        completed: list[WeaponCommand] = []
+        for command in self.player_commands[player.idx]:
+            if command.time + command.delay < datetime.now():
+                completed.append(command)
+                weapon = player.robot.weapons[command.id]
+                sx, sy = calculate_weapon_point_offset((player.robot.x, player.robot.y), player.robot.angle, (weapon.x, weapon.y), weapon.angle, (7.5, 0))
+                p_angle = player.robot.angle + weapon.angle
+                self.projectiles.append(Projectile(player.idx, sx, sy, p_angle, 3, 10, 5))
+                
+        for completed_command in completed:
+            self.player_commands[player.idx].remove(completed_command)
             
     def _update_projectile(self, projectile: Projectile):
         projectile.x += projectile.speed * math.cos(projectile.angle)
@@ -243,8 +267,8 @@ class Game:
         state.players = [
             PlayerState(
                 player.idx,
-                round(player.robot.x),
-                round(player.robot.y),
+                player.robot.x,
+                player.robot.y,
                 player.robot.angle,
                 round(player.robot.hp),
                 round(player.robot.energy),
@@ -254,8 +278,8 @@ class Game:
         
         state.projectiles = [
             ProjectileState(
-                round(projectile.x),
-                round(projectile.y),
+                projectile.x,
+                projectile.y,
                 projectile.angle,
                 projectile.size
             )

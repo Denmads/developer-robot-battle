@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import json
+import logging
 import socket
 import threading
 from typing import Callable
@@ -26,18 +27,41 @@ class TCPClient:
         
     def _listen(self):
         try:
+            buffer = bytearray()
             while self.connected:
                 data = self.client_socket.recv(1024)
                 if not data:
                     self.close()
                     self.disconnect_callback()
                     break
-                message = json.loads(data.decode().strip())
-                self.message_callback(self.parse_message(message))
+                
+                buffer += data
+
+                while self._buffer_has_full_message(buffer):
+                    self._handle_message_in_buffer(buffer)
         except:
             self.close()
             self.disconnect_callback()
+    
+    def _buffer_has_full_message(self, buffer: bytearray) -> bool:
+        return buffer.find(2) != -1 and buffer.find(3) != -1
+
+    def _handle_message_in_buffer(self, buffer: bytearray):
+        try:
+            stx_index = buffer.find(2)
+            etx_index = buffer.find(3)
             
+            data = buffer[stx_index+1:etx_index]
+            del buffer[:etx_index+1]
+            
+            message_data = data.decode().strip()
+            message = json.loads(message_data)
+            self.message_callback(self.parse_message(message))
+        except Exception as ex:
+            print(f"Unabled to parse message: {data.decode().strip()}")
+            logger = logging.getLogger(__name__)
+            logger.exception(ex)
+    
                 
     def parse_message(self, message):
         message_type = message["message_type"]
@@ -53,7 +77,10 @@ class TCPClient:
             return LobbyJoinedMessage(**message)
 
     def send(self, message: object):
-        self.client_socket.sendall(json.dumps(dataclasses.asdict(message)).encode())
+        message_bytes = bytearray(json.dumps(dataclasses.asdict(message)).encode())
+        message_bytes.insert(0, 2)
+        message_bytes.insert(len(message_bytes), 3)
+        self.client_socket.sendall(message_bytes)
 
     def close(self):
         self.connected = False

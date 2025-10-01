@@ -43,7 +43,9 @@ class Lobby:
         return self.game is not None
     
     def start(self, is_test: bool):
-        start_time = datetime.datetime.now() + datetime.timedelta(0, 3)
+        start_time = datetime.datetime.now() 
+        if not is_test:
+            start_time += datetime.timedelta(0, 3)
         message = RoundStartedMessage(start_time.isoformat())
         for player in self.players:
             player.sender.send(message)

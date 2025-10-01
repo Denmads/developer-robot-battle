@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 import math
 
 
@@ -16,3 +17,9 @@ class Weapon:
     def normalized_y(self) -> float:
         length = math.sqrt(math.pow(self.x, 2) + math.pow(self.y, 2))
         return self.y / length if length > 1 else self.y
+    
+@dataclass
+class WeaponCommand:
+    id: str
+    time: datetime = field(default_factory=datetime.now, init=False)
+    delay: timedelta = field(default=timedelta(seconds=0), init=False)
