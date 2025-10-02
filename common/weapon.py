@@ -22,4 +22,4 @@ class Weapon:
 class WeaponCommand:
     id: str
     time: datetime = field(default_factory=datetime.now, init=False)
-    delay: timedelta = field(default=timedelta(seconds=0), init=False)
+    delay: timedelta = field(default=timedelta(seconds=0))

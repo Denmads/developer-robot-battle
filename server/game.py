@@ -153,7 +153,7 @@ class Game:
                     continue
                 
             self.send_udp(self.get_state())
-            sleep(1 / 20) # 20 updates per second
+            sleep(1 / 30) # 30 updates per second
         
         winner = self._alive_players()[0].idx if len(self._alive_players()) > 0 else -1
         self.game_ended_callback(winner)

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from common.robot import RobotBuilder, RobotInterface, RobotStats
 from common.robot_hull import RobotHullType
 from common.weapon import Weapon, WeaponCommand
@@ -26,6 +27,8 @@ class MyRobot(RobotInterface):
             command_list.append(WeaponCommand("fl"))
         elif index == 2:
             command_list.append(WeaponCommand("bl"))
+            command_list.append(WeaponCommand("bl", delay=timedelta(milliseconds=100)))
+            command_list.append(WeaponCommand("bl", delay=timedelta(milliseconds=200)))
         elif index == 3:
             command_list.append(WeaponCommand("br"))
         elif index == 4:
