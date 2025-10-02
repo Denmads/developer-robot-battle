@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Projectile:
+    id: int
     owner_idx: str
     x: int
     y: int

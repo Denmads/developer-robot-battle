@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import Enum
 import threading
+import time
 import pygame
 from client.core.game_renderer import GameRenderer
 from client.core.tcp_client import TCPClient
@@ -79,7 +80,7 @@ class GameClient:
         
     def _on_udp_message(self, message: UDPMessage):
         if isinstance(message, GameStateMessage):
-            self.renderer.state = message
+            self.renderer.add_new_state(message)
         elif isinstance(message, PlayerStaticInfoMessage):
             if self.state == ClientState.IN_LOBBY:
                 self.state = ClientState.IN_GAME
@@ -87,6 +88,7 @@ class GameClient:
     
     def _run(self):       
         self.running = True
+        last_update: datetime = datetime.now()
         while self.running:
             for event in pygame.event.get():
                 self._handle_event(event)
@@ -98,8 +100,9 @@ class GameClient:
             elif self.state == ClientState.IN_LOBBY:
                 self._render_in_lobby()
             elif self.state == ClientState.IN_GAME or self.state == ClientState.IN_TEST:
-                self.renderer.render(self.screen)
-            
+                self.renderer.render(self.screen, datetime.now() - last_update)
+                
+            last_update = datetime.now()
             pygame.display.flip()
             self.clock.tick(60)
             

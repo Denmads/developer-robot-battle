@@ -70,6 +70,7 @@ class Game:
         self._initialize_players(players)
         
         self.projectiles: list[Projectile] = []
+        self.projectile_id_counter: int = 0
         
         self.running = False
         
@@ -228,7 +229,8 @@ class Game:
                 weapon = player.robot.weapons[command.id]
                 sx, sy = calculate_weapon_point_offset((player.robot.x, player.robot.y), player.robot.angle, (weapon.x, weapon.y), weapon.angle, (7.5, 0))
                 p_angle = player.robot.angle + weapon.angle
-                self.projectiles.append(Projectile(player.idx, sx, sy, p_angle, 3, 10, 5))
+                self.projectiles.append(Projectile(self.projectile_id_counter, player.idx, sx, sy, p_angle, 3, 6.66, 5))
+                self.projectile_id_counter = (self.projectile_id_counter + 1) % 65000
                 
         for completed_command in completed:
             self.player_commands[player.idx].remove(completed_command)
@@ -278,6 +280,7 @@ class Game:
         
         state.projectiles = [
             ProjectileState(
+                projectile.id,
                 projectile.x,
                 projectile.y,
                 projectile.angle,

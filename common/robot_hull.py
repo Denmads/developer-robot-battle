@@ -14,7 +14,7 @@ StandardHull = RobotStats(
     max_health=100,
     max_energy=100,
     energy_regen=0.1,
-    speed=5,
+    speed=3.33,
     turn_speed=0.1,
     size=25
 )
@@ -23,7 +23,7 @@ ToughHull = RobotStats(
     max_health=160,
     max_energy=80,
     energy_regen=0.1,
-    speed=3,
+    speed=2,
     turn_speed=0.1,
     size=30
 )
@@ -32,7 +32,7 @@ SpeedyHull = RobotStats(
     max_health=75,
     max_energy=80,
     energy_regen=0.1,
-    speed=7,
+    speed=4.66,
     turn_speed=0.15,
     size=20
 )
