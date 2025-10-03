@@ -7,7 +7,7 @@ from time import sleep
 from typing import Callable
 
 import pygame
-from common.calculations import calculate_energy_cost, calculate_weapon_point_offset
+from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, WeaponStaticInfo
 from common.projectile import Projectile
 from common.robot import Robot, RobotBuilder, RobotStats
@@ -86,30 +86,20 @@ class Game:
         for i, player in enumerate(players):
             self.player_commands[i] = []
             
-            stats = RobotStats()
-            player.robot_configuration.apply_stats(stats)    
-            stats.make_allowable()
-            stats.normalize()
-            
-            builder = RobotBuilder()
-            player.robot_configuration.build_robot(builder)
-            
             self.players[player.id] = PlayerInstance(
                 i,
-                Robot(
-                    builder,
-                    stats,
+                Robot.create(
+                    player.robot_configuration,
                     middle_x + starting_dist_from_middle * math.cos(angle_step * i), 
                     middle_y + starting_dist_from_middle * math.sin(angle_step * i),
-                    angle_step * i + math.pi, 
-                    player.robot_configuration.do_ability
+                    angle_step * i + math.pi
                 )
             )
             
             player_info.append(PlayerStaticInfo(
                 i,
                 player.color,
-                builder.hull,
+                self.players[player.id].robot.configuration.hull,
                 self.players[player.id].robot.size,
                 [
                     WeaponStaticInfo(w.x, w.y, w.angle, w.type) 
@@ -162,16 +152,14 @@ class Game:
         self.game_ended_callback(winner)
         
     def _update_from_input(self, player: PlayerInstance):
-        robot_move_speed = player.robot.hull.speed + player.robot.stats.speed * 0.5
-        robot_turn_speed = player.robot.hull.turn_speed + player.robot.stats.turn_speed * 0.02
         
         if player.keys.left:
-            player.robot.angle -= robot_turn_speed
+            player.robot.angle -= player.robot.turn_speed
         if player.keys.right:
-            player.robot.angle += robot_turn_speed
+            player.robot.angle += player.robot.turn_speed
         
-        dx = robot_move_speed * math.cos(player.robot.angle)
-        dy = robot_move_speed * math.sin(player.robot.angle)
+        dx = player.robot.move_speed * math.cos(player.robot.angle)
+        dy = player.robot.move_speed * math.sin(player.robot.angle)
         
         new_pos_x = player.robot.x
         new_pos_y = player.robot.y
@@ -214,7 +202,7 @@ class Game:
             for command in new_commands:
                 command.time = datetime.now()
                 
-            total_energy_cost = calculate_energy_cost(player.robot, new_commands)
+            total_energy_cost = calculate_ability_energy_cost(player.robot, new_commands)
                 
             if self._can_activate_ability(player, new_commands) and total_energy_cost <= player.robot.energy:
                 player.robot.energy -= total_energy_cost

@@ -4,7 +4,7 @@ import socket
 import threading
 from time import sleep
 from common.udp_message import GameStateMessage
-from common.robot import RobotInterface
+from common.robot import RobotInterface, parse_robot_config_from_string
 from common.tcp_messages import ExitTestMessage, InputMessage, Message, PlayerInfoMessage, StartRoundMessage
 from server.game import Game
 from server.lobby import Lobby
@@ -41,7 +41,7 @@ class GameServer:
     def _on_message(self, socket: socket.socket, message: Message):
         if isinstance(message, PlayerInfoMessage):
             print(f"Player connected '{message.id}'", flush=True)
-            robot = self._parse_robot(message.robot_code)
+            robot = parse_robot_config_from_string(message.robot_code)
             player = Player(
                 message.id, 
                 message.udp_port, 
@@ -64,20 +64,11 @@ class GameServer:
         elif isinstance(message, InputMessage):
             if self.lobby.is_started():
                 self.lobby.game.update_key(message.player_id, message.key, message.state)
-            
-    def _parse_robot(self, robot_code: str) -> RobotInterface:
-        namespace = {}
-        exec(robot_code, namespace)
-
-        # Get the class reference from the namespace
-        MyRobot = namespace["MyRobot"]
-
-        # Create an instance
-        return MyRobot()
     
     
     def _on_player_disconnect(self, socket: socket.socket):
         player = self.socket_player_dict[socket]
+        del self.socket_player_dict[socket]
         print(f"Player disconnected '{player.id}'")
         self.lobby.remove_player(player, send_update=self.state == ServerState.IN_LOBBY)
         

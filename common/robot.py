@@ -23,12 +23,20 @@ class RobotInterface:
     def do_ability(self, index: int, command_list: list[WeaponCommand]) -> None:
         pass
     
+def parse_robot_config_from_string(code: str) -> RobotInterface:
+    namespace = {}
+    exec(code, namespace)
 
+    # Get the class reference from the namespace
+    MyRobot = namespace["MyRobot"]
+
+    # Create an instance
+    return MyRobot()
 
 
 class Robot:
     
-    def __init__(self, configuration: RobotBuilder, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int], None]):
+    def __init__(self, configuration: RobotBuilder, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int, list[WeaponCommand]], None]):
         self.configuration = configuration
         self.hull = get_hull_instance(configuration.hull)
         
@@ -48,6 +56,9 @@ class Robot:
         self.energy = self.max_energy
         self.energy_regen = self.hull.energy_regen + self.stats.energy_regen * 0.01
         
+        self.move_speed = self.hull.move_speed + self.stats.move_speed * 0.5
+        self.turn_speed = self.hull.turn_speed + self.stats.turn_speed * 0.02
+        
         self.weapons = self._create_weapons(self.configuration)
         
     def _create_weapons(self, config: RobotBuilder):
@@ -62,3 +73,23 @@ class Robot:
             )
             for w in config.weapons
         }
+        
+    @staticmethod
+    def create(configuration: RobotInterface, start_x: float, start_y: float, start_angle: float):
+        stats = RobotStats()
+        configuration.apply_stats(stats)    
+        stats.make_allowable()
+        stats.normalize()
+        
+        builder = RobotBuilder()
+        configuration.build_robot(builder)
+        
+        return Robot(
+            builder,
+            stats,
+            start_x, 
+            start_y,
+            start_angle, 
+            configuration.do_ability
+        )
+            

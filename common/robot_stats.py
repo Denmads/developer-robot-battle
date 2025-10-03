@@ -9,7 +9,7 @@ class RobotStats:
     max_health: float = field(default=1)
     max_energy: float = field(default=1)
     energy_regen: float = field(default=1)
-    speed: float = field(default=1)
+    move_speed: float = field(default=1)
     turn_speed: float = field(default=1)
     size: float = field(default=1)
     
@@ -20,8 +20,8 @@ class RobotStats:
             self.max_energy = 1
         if math.isinf(self.energy_regen) or math.isnan(self.energy_regen):
             self.energy_regen = 1
-        if math.isinf(self.speed) or math.isnan(self.speed):
-            self.speed = 1
+        if math.isinf(self.move_speed) or math.isnan(self.move_speed):
+            self.move_speed = 1
         if math.isinf(self.turn_speed) or math.isnan(self.turn_speed):
             self.turn_speed = 1
         if math.isinf(self.size) or math.isnan(self.size):
@@ -30,19 +30,19 @@ class RobotStats:
         self.max_health = abs(self.max_health)
         self.max_energy = abs(self.max_energy)
         self.energy_regen = abs(self.energy_regen)
-        self.speed = abs(self.speed)
+        self.move_speed = abs(self.move_speed)
         self.turn_speed = abs(self.turn_speed)
         self.size = abs(self.size)
 
     def normalize(self):
         
 
-        total = self.max_health + self.max_energy + self.energy_regen + self.speed + self.turn_speed + self.size
+        total = self.max_health + self.max_energy + self.energy_regen + self.move_speed + self.turn_speed + self.size
         scale = TOTAL_STAT_POINTS / total
         
         self.max_health = self.max_health * scale
         self.max_energy = self.max_energy * scale
         self.energy_regen = self.energy_regen * scale
-        self.speed = self.speed * scale
+        self.move_speed = self.move_speed * scale
         self.turn_speed = self.turn_speed * scale
         self.size = self.size * scale

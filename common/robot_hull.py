@@ -13,8 +13,8 @@ class RobotHullType(IntEnum):
 StandardHull = RobotStats(
     max_health=100,
     max_energy=100,
-    energy_regen=0.1,
-    speed=3.33,
+    energy_regen=0.06,
+    move_speed=3.33,
     turn_speed=0.1,
     size=25
 )
@@ -22,8 +22,8 @@ StandardHull = RobotStats(
 ToughHull = RobotStats(
     max_health=160,
     max_energy=80,
-    energy_regen=0.1,
-    speed=2,
+    energy_regen=0.06,
+    move_speed=2,
     turn_speed=0.1,
     size=30
 )
@@ -31,8 +31,8 @@ ToughHull = RobotStats(
 SpeedyHull = RobotStats(
     max_health=75,
     max_energy=80,
-    energy_regen=0.1,
-    speed=4.66,
+    energy_regen=0.06,
+    move_speed=4.66,
     turn_speed=0.15,
     size=20
 )

@@ -30,7 +30,7 @@ def calculate_weapon_point_offset(
             point_offset[0] * sn + point_offset[1] * cs + weapon_base_y
         )
         
-def calculate_energy_cost(robot: Robot, commands: list[WeaponCommand]) -> float:
+def calculate_ability_energy_cost(robot: Robot, commands: list[WeaponCommand]) -> float:
     weapon_fire_counts: defaultdict[str, int] = defaultdict(int)
     for command in commands:
         weapon_fire_counts[command.id] += 1
@@ -41,3 +41,7 @@ def calculate_energy_cost(robot: Robot, commands: list[WeaponCommand]) -> float:
         energy_cost += weapon_stats.base_energy_cost * math.pow(weapon_stats.consecutive_energy_cost_factor, fire_count - 1)
         
     return energy_cost
+
+def calculate_ability_cooldown(robot: Robot, commands: list[WeaponCommand]) -> float:
+    weapons = [robot.weapons[id] for id in set([c.id for c in commands])]
+    return max(map(lambda w: w.stats.cooldown_seconds, weapons))
