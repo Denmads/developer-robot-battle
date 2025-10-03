@@ -1,18 +1,18 @@
 import colorsys
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 import random
 from time import sleep
 from typing import Callable
 
 import pygame
-from common.calculations import calculate_weapon_point_offset
+from common.calculations import calculate_energy_cost, calculate_weapon_point_offset
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, WeaponStaticInfo
 from common.projectile import Projectile
 from common.robot import Robot, RobotBuilder, RobotStats
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH
-from common.weapon import WeaponCommand
+from common.weapon import WeaponCommand, get_weapon_stats
 from server.player import Player
 
 
@@ -112,7 +112,7 @@ class Game:
                 builder.hull,
                 self.players[player.id].robot.size,
                 [
-                    WeaponStaticInfo(w.x, w.y, w.angle) 
+                    WeaponStaticInfo(w.x, w.y, w.angle, w.type) 
                     for w in self.players[player.id].robot.weapons.values()],
                 self.players[player.id].robot.max_hp,
                 self.players[player.id].robot.max_energy
@@ -131,9 +131,10 @@ class Game:
         
     def run(self):
         self.running = True
+        last_update = datetime.now()
         while self.running:
             if datetime.now() > self.start_time:
-
+                delta = datetime.now() - last_update
                 for projectile in self.projectiles:
                     self._update_projectile(projectile)
 
@@ -141,7 +142,7 @@ class Game:
                     
                     self._update_from_input(player)
                     player.old_keys = player.keys.clone()
-                    self._update_player(player)    
+                    self._update_player(player, delta)    
                     
                 for p in list(filter(self._is_outside_screen, self.projectiles)):
                     p.destroy = True
@@ -154,6 +155,7 @@ class Game:
                     continue
                 
             self.send_udp(self.get_state())
+            last_update = datetime.now()
             sleep(1 / 30) # 30 updates per second
         
         winner = self._alive_players()[0].idx if len(self._alive_players()) > 0 else -1
@@ -195,31 +197,41 @@ class Game:
         player.robot.y = new_pos_y
             
         new_commands: list[WeaponCommand] = []
-        if player.keys.q and not player.old_keys.q and player.robot.energy > 10:
+        if player.keys.q and not player.old_keys.q:
             player.robot.ability_func(1, new_commands)
-            player.robot.energy -= 10
-        elif player.keys.w and not player.old_keys.w and player.robot.energy > 10:
+        elif player.keys.w and not player.old_keys.w:
             player.robot.ability_func(2, new_commands)
-            player.robot.energy -= 10
-        elif player.keys.e and not player.old_keys.e and player.robot.energy > 10:
+        elif player.keys.e and not player.old_keys.e:
             player.robot.ability_func(3, new_commands)
-            player.robot.energy -= 10
-        elif player.keys.a and not player.old_keys.a and player.robot.energy > 10:
+        elif player.keys.a and not player.old_keys.a:
             player.robot.ability_func(4, new_commands)
-            player.robot.energy -= 10
-        elif player.keys.s and not player.old_keys.s and player.robot.energy > 10:
+        elif player.keys.s and not player.old_keys.s:
             player.robot.ability_func(5, new_commands)
-            player.robot.energy -= 10
-        elif player.keys.d and not player.old_keys.d and player.robot.energy > 10:
+        elif player.keys.d and not player.old_keys.d:
             player.robot.ability_func(6, new_commands)
-            player.robot.energy -= 10
             
-        for command in new_commands:
-            command.time = datetime.now()
+        if len(new_commands) > 0:
+            for command in new_commands:
+                command.time = datetime.now()
+                
+            total_energy_cost = calculate_energy_cost(player.robot, new_commands)
+                
+            if self._can_activate_ability(player, new_commands) and total_energy_cost <= player.robot.energy:
+                player.robot.energy -= total_energy_cost
+                fired_weapons = set([c.id for c in new_commands])
+                for weapon_id in fired_weapons:
+                    player.robot.weapons[weapon_id].cooldown_time_left = player.robot.weapons[weapon_id].stats.cooldown_seconds
+                    
+                self.player_commands[player.idx] += new_commands
             
-        self.player_commands[player.idx] += new_commands
+    def _can_activate_ability(self, player: PlayerInstance, commands: list[WeaponCommand]):
+        for weapon_id in set([c.id for c in commands]):
+            if player.robot.weapons[weapon_id].cooldown_time_left > 0:
+                return False
             
-    def _update_player(self, player: PlayerInstance):
+        return True
+            
+    def _update_player(self, player: PlayerInstance, delta: timedelta):
         player.robot.energy = math.ceil(min(player.robot.max_energy, player.robot.energy + player.robot.energy_regen))
         
         completed: list[WeaponCommand] = []
@@ -229,11 +241,15 @@ class Game:
                 weapon = player.robot.weapons[command.id]
                 sx, sy = calculate_weapon_point_offset((player.robot.x, player.robot.y), player.robot.angle, (weapon.x, weapon.y), weapon.angle, (7.5, 0))
                 p_angle = player.robot.angle + weapon.angle
-                self.projectiles.append(Projectile(self.projectile_id_counter, player.idx, sx, sy, p_angle, 3, 6.66, 5))
+                
+                self.projectiles.append(Projectile(self.projectile_id_counter, player.idx, sx, sy, p_angle, weapon.stats.bullet_size, weapon.stats.bullet_speed, weapon.stats.base_damage))
                 self.projectile_id_counter = (self.projectile_id_counter + 1) % 65000
                 
         for completed_command in completed:
             self.player_commands[player.idx].remove(completed_command)
+            
+        for weapon in player.robot.weapons.values():
+            weapon.cooldown_time_left = max(0, weapon.cooldown_time_left - delta.total_seconds())
             
     def _update_projectile(self, projectile: Projectile):
         projectile.x += projectile.speed * math.cos(projectile.angle)

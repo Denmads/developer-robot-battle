@@ -1,4 +1,8 @@
+from collections import defaultdict
 import math
+
+from common.robot import Robot
+from common.weapon import WeaponCommand
 
 def rot(vx, vy, a):
     cs = math.cos(a)
@@ -25,3 +29,15 @@ def calculate_weapon_point_offset(
             point_offset[0] * cs - point_offset[1] * sn + weapon_base_x,
             point_offset[0] * sn + point_offset[1] * cs + weapon_base_y
         )
+        
+def calculate_energy_cost(robot: Robot, commands: list[WeaponCommand]) -> float:
+    weapon_fire_counts: defaultdict[str, int] = defaultdict(int)
+    for command in commands:
+        weapon_fire_counts[command.id] += 1
+        
+    energy_cost = 0
+    for weapon_id, fire_count in weapon_fire_counts.items():
+        weapon_stats = robot.weapons[weapon_id].stats
+        energy_cost += weapon_stats.base_energy_cost * math.pow(weapon_stats.consecutive_energy_cost_factor, fire_count - 1)
+        
+    return energy_cost

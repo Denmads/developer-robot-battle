@@ -4,6 +4,7 @@ import colorsys
 import struct
 
 from common.robot_hull import RobotHullType
+from common.weapon import WeaponType
 
 
 
@@ -34,7 +35,7 @@ class PlayerStaticInfoMessage(UDPMessage):
             
             buf += struct.pack("<H", len(p.weapons))
             for w in p.weapons:
-                buf += struct.pack(WeaponStaticInfo.struct_format, w.x_offset, w.y_offset, w.angle)
+                buf += struct.pack(WeaponStaticInfo.struct_format, w.x_offset, w.y_offset, w.angle, w.type)
             
         return bytes(buf)
     
@@ -55,9 +56,9 @@ class PlayerStaticInfoMessage(UDPMessage):
             offset += 2
             weapons: list[WeaponStaticInfo] = []
             for _ in range(num_weapons):
-                x_offset, y_offset, angle = struct.unpack_from(WeaponStaticInfo.struct_format, data, offset)
+                x_offset, y_offset, angle, type = struct.unpack_from(WeaponStaticInfo.struct_format, data, offset)
                 offset += struct.calcsize(WeaponStaticInfo.struct_format)
-                weapons.append(WeaponStaticInfo(x_offset, y_offset, angle))
+                weapons.append(WeaponStaticInfo(x_offset, y_offset, angle, type))
             
             info.player_info.append(PlayerStaticInfo(idx, (r, g, b), hull, size, weapons, max_hp, max_energy))
             
@@ -80,11 +81,12 @@ class PlayerStaticInfo:
     
 @dataclass
 class WeaponStaticInfo:
-    struct_format: str = field(default="<fff", init=False)
+    struct_format: str = field(default="<fffH", init=False)
     
     x_offset: int
     y_offset: int
     angle: float
+    type: WeaponType
 
 
 class GameStateMessage(UDPMessage):

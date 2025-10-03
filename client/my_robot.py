@@ -1,7 +1,7 @@
 from datetime import timedelta
 from common.robot import RobotBuilder, RobotInterface, RobotStats
 from common.robot_hull import RobotHullType
-from common.weapon import Weapon, WeaponCommand
+from common.weapon import WeaponConfig, WeaponCommand
 
 
 class MyRobot(RobotInterface):
@@ -9,10 +9,10 @@ class MyRobot(RobotInterface):
     def build_robot(self, builder: RobotBuilder) -> None:
         builder.hull = RobotHullType.SPEEDY
         
-        builder.weapons.append(Weapon("fl", 0.5, -0.5, 315))
-        builder.weapons.append(Weapon("bl", -0.5, -0.5, 225))
-        builder.weapons.append(Weapon("br", -0.5, 0.5, 135))
-        builder.weapons.append(Weapon("fr", 0.5, 0.5, 45))
+        builder.weapons.append(WeaponConfig("fl", 0.5, -0.5, 315))
+        builder.weapons.append(WeaponConfig("bl", -0.5, -0.5, 225))
+        builder.weapons.append(WeaponConfig("br", -0.5, 0.5, 135))
+        builder.weapons.append(WeaponConfig("fr", 0.5, 0.5, 45))
     
     def apply_stats(self, stats: RobotStats) -> None:
         stats.speed = 1

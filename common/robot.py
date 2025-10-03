@@ -4,12 +4,12 @@ from typing import Callable
 
 from common.robot_hull import RobotHullType, get_hull_instance
 from common.robot_stats import RobotStats
-from common.weapon import Weapon, WeaponCommand
+from common.weapon import Weapon, WeaponConfig, WeaponCommand, get_weapon_stats
 
 @dataclass
 class RobotBuilder:
     hull: RobotHullType = field(default=RobotHullType.STANDARD)
-    weapons: list[Weapon] = field(default_factory=list)
+    weapons: list[WeaponConfig] = field(default_factory=list)
 
 
 class RobotInterface:
@@ -48,7 +48,17 @@ class Robot:
         self.energy = self.max_energy
         self.energy_regen = self.hull.energy_regen + self.stats.energy_regen * 0.01
         
-        self.weapons = {
-            w.id: Weapon(w.id, w.normalized_x() * self.size, w.normalized_y() * self.size, w.angle * (math.pi / 180))
-            for w in configuration.weapons
+        self.weapons = self._create_weapons(self.configuration)
+        
+    def _create_weapons(self, config: RobotBuilder):
+        return {
+            w.id: Weapon(
+                w.id, 
+                w.normalized_x() * self.size, 
+                w.normalized_y() * self.size, 
+                w.angle * (math.pi / 180),
+                w.type,
+                get_weapon_stats(w.type)
+            )
+            for w in config.weapons
         }
