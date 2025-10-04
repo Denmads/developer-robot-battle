@@ -7,11 +7,11 @@ from time import sleep
 from typing import Callable
 
 import pygame
+from common.arena import Arena
 from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, WeaponStaticInfo
 from common.projectile import Projectile
 from common.robot import RobotInfo, Robot, RobotBuilder, RobotStats
-from common.constants import ARENA_HEIGHT, ARENA_WIDTH
 from common.weapon import WeaponCommand, get_weapon_stats
 from server.player import Player
 
@@ -59,7 +59,8 @@ class PlayerInstance:
 
 class Game:
     
-    def __init__(self, players: list[Player], send_udp: Callable[[object], None], game_ended: Callable[[int], None], start_time: datetime, is_test: bool = False):
+    def __init__(self, players: list[Player], arena: Arena, send_udp: Callable[[object], None], game_ended: Callable[[int], None], start_time: datetime, is_test: bool = False):
+        self.arena = arena
         self.send_udp = send_udp
         self.game_ended_callback = game_ended
         self.is_test = is_test
@@ -77,8 +78,8 @@ class Game:
     def _initialize_players(self, players: list[Player]):
         angle_step = math.pi * 2 / len(players)
         starting_dist_from_middle = 200
-        middle_x = ARENA_WIDTH / 2
-        middle_y = ARENA_HEIGHT / 2
+        middle_x = self.arena.width / 2
+        middle_y = self.arena.height / 2
         
         self.players: dict[str, PlayerInstance] = {}
         
@@ -173,13 +174,13 @@ class Game:
                 
         if new_pos_x < player.robot.size:
             new_pos_x = player.robot.x + (player.robot.x - player.robot.size) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
-        elif new_pos_x > ARENA_WIDTH - player.robot.size:
-            new_pos_x = player.robot.x + ((ARENA_WIDTH - player.robot.size) - player.robot.x) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
+        elif new_pos_x > self.arena.width - player.robot.size:
+            new_pos_x = player.robot.x + ((self.arena.width - player.robot.size) - player.robot.x) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
 
         if new_pos_y < player.robot.size:
             new_pos_y = player.robot.y + (player.robot.y - player.robot.size) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
-        elif new_pos_y > ARENA_HEIGHT - player.robot.size:
-            new_pos_y = player.robot.y + ((ARENA_HEIGHT - player.robot.size) - player.robot.y) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
+        elif new_pos_y > self.arena.height - player.robot.size:
+            new_pos_y = player.robot.y + ((self.arena.height - player.robot.size) - player.robot.y) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
 
         player.robot.x = new_pos_x
         player.robot.y = new_pos_y
@@ -256,7 +257,7 @@ class Game:
         projectile.y += projectile.speed * math.sin(projectile.angle)
             
     def _is_outside_screen(self, projectile: Projectile):
-        return projectile.x < -projectile.size or projectile.x > ARENA_WIDTH + projectile.size or projectile.y < -projectile.size or projectile.y > ARENA_HEIGHT + projectile.size
+        return projectile.x < -projectile.size or projectile.x > self.arena.width + projectile.size or projectile.y < -projectile.size or projectile.y > self.arena.height + projectile.size
             
     def _check_collisions(self):
         for projectile in self.projectiles:

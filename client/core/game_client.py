@@ -8,7 +8,6 @@ from client.core.game_renderer import GameRenderer
 from client.core.tcp_client import TCPClient
 from client.core.udp_client import UDPClient
 from common.calculations import calculate_ability_cooldown, calculate_ability_energy_cost
-from common.constants import ARENA_HEIGHT, ARENA_WIDTH, UDP_PORT
 from common.robot import Robot, parse_robot_config_from_string
 from common.udp_message import GameStateMessage, PlayerStaticInfoMessage, UDPMessage
 from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage, LobbyJoinedMessage, Message, PlayerInfoMessage, RoundEndedMessage, RoundStartedMessage, StartRoundMessage
@@ -16,6 +15,8 @@ from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage,
 ALLOWED_KEYS = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_a, pygame.K_s, pygame.K_d,
                 pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]
 
+
+MENU_SIZE = (800, 600)
 
 class ClientState(Enum):
     NOT_CONNECTED = 1
@@ -64,15 +65,15 @@ class GameClient:
         
         # Init pygame
         pygame.init()
-        self.screen = pygame.display.set_mode((ARENA_WIDTH, ARENA_HEIGHT))
+        self.screen = pygame.display.set_mode(MENU_SIZE)
         pygame.display.set_caption(f"Robot Battle ({self.id})")
         self.clock = pygame.time.Clock()
         self.font_header = pygame.font.SysFont("Arial", 20)
         self.font_text = pygame.font.SysFont("Arial", 16)
         
         self.screen_center = (
-            ARENA_WIDTH / 2,
-            ARENA_HEIGHT / 2
+            MENU_SIZE[0] / 2,
+            MENU_SIZE[1] / 2
         )
             
         self._run()
@@ -84,6 +85,8 @@ class GameClient:
             self.state = ClientState.IN_LOBBY
         elif isinstance(message, RoundStartedMessage):
             self.renderer.round_start_time = datetime.fromisoformat(message.begin_time)
+            self.renderer.arena_size = (message.arena_width, message.arena_height)
+            pygame.display.set_mode((message.arena_width, message.arena_height))
         elif isinstance(message, RoundEndedMessage):
             if len(message.winner_id) > 0:
                 self.renderer.round_winner = message.winner_id 
@@ -94,6 +97,7 @@ class GameClient:
     def _go_to_lobby(self):
         self.state = ClientState.IN_LOBBY
         self.renderer.round_winner = None
+        pygame.display.set_mode(MENU_SIZE)
             
     def _on_tcp_disconnect(self):
         self.state = ClientState.NOT_CONNECTED
@@ -185,11 +189,11 @@ class GameClient:
                 self._render_text_top_left_at("<", text_left_margin + name_w + selector_spacing, text_y, self.font_text, color)
         
         # Robot stats
-        min_x = ARENA_WIDTH
+        min_x = MENU_SIZE[0]
         max_x = 0
         max_y = 0
         
-        right_margin = ARENA_WIDTH - 325
+        right_margin = MENU_SIZE[0] - 325
         top_margin = 118
         stat_spacing = self.font_text.get_height() + 10
         stats = {
@@ -241,7 +245,7 @@ class GameClient:
         
         self._render_text_top_left_at("Stats", min_x - padding, top_margin - padding - 20 - self.font_header.get_height() - 10, self.font_header)
         
-        self._render_text_bottom_right_at("Press 'Enter' to connect...", ARENA_WIDTH - 50, ARENA_HEIGHT - 50, self.font_text)
+        self._render_text_bottom_right_at("Press 'Enter' to connect...", MENU_SIZE[0] - 50, MENU_SIZE[1] - 50, self.font_text)
         
         
     
@@ -252,9 +256,9 @@ class GameClient:
         for i, (id, color) in enumerate(self.lobby_info.players.items()):
             self._render_text_top_left_at(f"- {id}", 75, 75 + i * player_spacing, self.font_text, color)
             
-        self._render_text_bottom_right_at("KP Enter - Start", ARENA_WIDTH - 50, ARENA_HEIGHT - 114, self.font_text)
-        self._render_text_bottom_right_at("T - Start Test", ARENA_WIDTH - 50, ARENA_HEIGHT - 82, self.font_text)
-        self._render_text_bottom_right_at("Delete   - Disconnect", ARENA_WIDTH - 50, ARENA_HEIGHT - 50, self.font_text)
+        self._render_text_bottom_right_at("KP Enter - Start", MENU_SIZE[0] - 50, MENU_SIZE[1] - 114, self.font_text)
+        self._render_text_bottom_right_at("T - Start Test", MENU_SIZE[0] - 50, MENU_SIZE[1] - 82, self.font_text)
+        self._render_text_bottom_right_at("Delete   - Disconnect", MENU_SIZE[0] - 50, MENU_SIZE[1] - 50, self.font_text)
     
     def _render_text_center_at(self, text: str, x: float, y: float, font: pygame.font.Font, color: tuple[int, int, int] = (255, 255, 255)) -> tuple[int, int]:
         text_surface = font.render(text, True, color)

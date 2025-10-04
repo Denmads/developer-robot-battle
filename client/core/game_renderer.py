@@ -4,7 +4,6 @@ import math
 import pygame
 
 from common.calculations import calculate_weapon_point_offset
-from common.constants import ARENA_HEIGHT, ARENA_WIDTH
 from common.udp_message import GameStateMessage, PlayerStaticInfo
 
 @dataclass
@@ -21,6 +20,7 @@ class GameRenderer:
         self.time_in_state: timedelta = timedelta()
 
         self.static_player_info: dict[int, PlayerStaticInfo] = None
+        self.arena_size: tuple[int, int] = None
         self.round_start_time: datetime = None
         self.round_winner: str = None
 
@@ -154,9 +154,9 @@ class GameRenderer:
         if self.round_start_time is not None and self.round_start_time > datetime.now():
             seconds_to_start = math.ceil((self.round_start_time - datetime.now()).total_seconds())
             countdown_surface = self.announcement_font.render(str(seconds_to_start), True, (255, 255, 255))
-            screen.blit(countdown_surface, (ARENA_WIDTH / 2 - countdown_surface.get_width() / 2, ARENA_HEIGHT / 2 - countdown_surface.get_height() / 2 ))
+            screen.blit(countdown_surface, (self.arena_size[0] / 2 - countdown_surface.get_width() / 2, self.arena_size[1] / 2 - countdown_surface.get_height() / 2 ))
             
     def _render_winner(self, screen: pygame.Surface):
         if self.round_winner:
             winner_surface = self.announcement_secondary_font.render(f"{self.round_winner} won", True, (255, 255, 255))
-            screen.blit(winner_surface, (ARENA_WIDTH / 2 - winner_surface.get_width() / 2, ARENA_HEIGHT / 2 - winner_surface.get_height() / 2 ))
+            screen.blit(winner_surface, (self.arena_size[0] / 2 - winner_surface.get_width() / 2, self.arena_size[1] / 2 - winner_surface.get_height() / 2 ))

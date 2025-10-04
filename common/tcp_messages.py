@@ -33,6 +33,9 @@ class ExitTestMessage(Message):
 class RoundStartedMessage(Message):
     message_type: int = field(default=6, init=False)
     begin_time: str
+    arena_width: int
+    arena_height: int
+    
 
 @dataclass
 class RoundEndedMessage(Message):
