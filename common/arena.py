@@ -13,6 +13,9 @@ class Arena:
         height = 600
         dist_from_middle = 200
         
+        if num_players == 2:
+            return Arena(1000, 750, 250)
+        
         if num_players > 4:
             width += ((num_players - 4) // 2) * 100
             height += ((num_players - 4) // 2) * 75

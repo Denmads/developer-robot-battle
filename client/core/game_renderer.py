@@ -49,7 +49,7 @@ class GameRenderer:
         if len(self.states) < 2:
             return
 
-        alpha = self.time_in_state / self.total_state_time
+        alpha = self.time_in_state / self.total_state_time if self.total_state_time != 0 else 0
 
         self._draw_players(screen, alpha)
         self._draw_projectiles(screen, alpha)

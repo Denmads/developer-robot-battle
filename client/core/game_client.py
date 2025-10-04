@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import Enum
 import glob
+import queue
 import threading
 import time
 import pygame
@@ -8,7 +9,7 @@ from client.core.game_renderer import GameRenderer
 from client.core.tcp_client import TCPClient
 from client.core.udp_client import UDPClient
 from common.calculations import calculate_ability_cooldown, calculate_ability_energy_cost
-from common.robot import Robot, parse_robot_config_from_string
+from common.robot import Robot, RobotInfo, parse_robot_config_from_string
 from common.udp_message import GameStateMessage, PlayerStaticInfoMessage, UDPMessage
 from common.tcp_messages import ExitTestMessage, InputMessage, LobbyInfoMessage, LobbyJoinedMessage, Message, PlayerInfoMessage, RoundEndedMessage, RoundStartedMessage, StartRoundMessage
 
@@ -29,6 +30,7 @@ class GameClient:
     def __init__(self):
         self.tcp_client = TCPClient(self._on_tcp_message, self._on_tcp_disconnect)
         self.state: ClientState = ClientState.NOT_CONNECTED
+        self.main_thread_tasks = queue.Queue()
         
         self.all_robots = glob.glob("client\\robots\\*.py")
         self.current_selected_robot: int = 0
@@ -86,7 +88,7 @@ class GameClient:
         elif isinstance(message, RoundStartedMessage):
             self.renderer.round_start_time = datetime.fromisoformat(message.begin_time)
             self.renderer.arena_size = (message.arena_width, message.arena_height)
-            pygame.display.set_mode((message.arena_width, message.arena_height))
+            self.main_thread_tasks.put(("resize", (message.arena_width, message.arena_height)))
         elif isinstance(message, RoundEndedMessage):
             if len(message.winner_id) > 0:
                 self.renderer.round_winner = message.winner_id 
@@ -97,7 +99,7 @@ class GameClient:
     def _go_to_lobby(self):
         self.state = ClientState.IN_LOBBY
         self.renderer.round_winner = None
-        pygame.display.set_mode(MENU_SIZE)
+        self.main_thread_tasks.put(("resize", MENU_SIZE))
             
     def _on_tcp_disconnect(self):
         self.state = ClientState.NOT_CONNECTED
@@ -115,6 +117,12 @@ class GameClient:
         self.running = True
         last_update: datetime = datetime.now()
         while self.running:
+            while not self.main_thread_tasks.empty():
+                task, data = self.main_thread_tasks.get()
+                if task == "resize":
+                    width, height = data
+                    self.screen = pygame.display.set_mode((width, height))
+            
             for event in pygame.event.get():
                 self._handle_event(event)
                     
@@ -221,7 +229,16 @@ class GameClient:
         ability_stats = {}
         for i, key in enumerate(["q", "w", "e", "a", "s", "d"]):
             commands = []
-            self.robot.ability_func(i+1, commands)
+            self.robot.ability_func(i+1, commands, RobotInfo(
+                self.robot.hp,
+                self.robot.max_hp,
+                self.robot.energy,
+                self.robot.max_energy,
+                {
+                    w.id: w.cooldown_time_left
+                    for w in self.robot.weapons.values()
+                }
+            ))
             ability_stats[key] = {
                 "cost": round(calculate_ability_energy_cost(self.robot, commands), 1),
                 "cooldown": round(calculate_ability_cooldown(self.robot, commands), 2)
