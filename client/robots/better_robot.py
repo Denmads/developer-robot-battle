@@ -1,5 +1,5 @@
 from datetime import timedelta
-from common.robot import RobotBuilder, RobotInterface, RobotStats
+from common.robot import RobotBuilder, RobotInfo, RobotInterface, RobotStats
 from common.robot_hull import RobotHullType
 from common.weapon import WeaponConfig, WeaponCommand
 
@@ -22,7 +22,7 @@ class MyRobot(RobotInterface):
         stats.max_health = 1
         stats.size = 1
 
-    def do_ability(self, index: int, command_list: list[WeaponCommand]) -> None:
+    def do_ability(self, index: int, command_list: list[WeaponCommand], info: RobotInfo) -> None:
         if index == 1:
             command_list.append(WeaponCommand("fl"))
         elif index == 2:

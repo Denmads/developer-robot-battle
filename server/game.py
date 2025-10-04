@@ -10,7 +10,7 @@ import pygame
 from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, WeaponStaticInfo
 from common.projectile import Projectile
-from common.robot import Robot, RobotBuilder, RobotStats
+from common.robot import RobotInfo, Robot, RobotBuilder, RobotStats
 from common.constants import ARENA_HEIGHT, ARENA_WIDTH
 from common.weapon import WeaponCommand, get_weapon_stats
 from server.player import Player
@@ -185,20 +185,32 @@ class Game:
         player.robot.y = new_pos_y
             
         new_commands: list[WeaponCommand] = []
+        info = RobotInfo(
+            player.robot.hp,
+            player.robot.max_hp,
+            player.robot.energy,
+            player.robot.max_energy,
+            {
+                w.id: w.cooldown_time_left
+                for w in player.robot.weapons.values()
+            }
+        )
         if player.keys.q and not player.old_keys.q:
-            player.robot.ability_func(1, new_commands)
+            player.robot.ability_func(1, new_commands, info)
         elif player.keys.w and not player.old_keys.w:
-            player.robot.ability_func(2, new_commands)
+            player.robot.ability_func(2, new_commands, info)
         elif player.keys.e and not player.old_keys.e:
-            player.robot.ability_func(3, new_commands)
+            player.robot.ability_func(3, new_commands, info)
         elif player.keys.a and not player.old_keys.a:
-            player.robot.ability_func(4, new_commands)
+            player.robot.ability_func(4, new_commands, info)
         elif player.keys.s and not player.old_keys.s:
-            player.robot.ability_func(5, new_commands)
+            player.robot.ability_func(5, new_commands, info)
         elif player.keys.d and not player.old_keys.d:
-            player.robot.ability_func(6, new_commands)
+            player.robot.ability_func(6, new_commands, info)
             
         if len(new_commands) > 0:
+            new_commands = list(filter(lambda c: c.id in player.robot.weapons , new_commands))
+            
             for command in new_commands:
                 command.time = datetime.now()
                 

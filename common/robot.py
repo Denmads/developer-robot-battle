@@ -12,6 +12,14 @@ class RobotBuilder:
     weapons: list[WeaponConfig] = field(default_factory=list)
 
 
+@dataclass
+class RobotInfo:
+    hp: float
+    max_hp: float
+    energy: float
+    max_energy: float
+    cooldowns: dict[str, float]
+
 class RobotInterface:
     
     def build_robot(self, builder: RobotBuilder) -> None:
@@ -20,7 +28,7 @@ class RobotInterface:
     def apply_stats(self, stats: RobotStats) -> None:
         pass
 
-    def do_ability(self, index: int, command_list: list[WeaponCommand]) -> None:
+    def do_ability(self, index: int, command_list: list[WeaponCommand], info: RobotInfo) -> None:
         pass
     
 def parse_robot_config_from_string(code: str) -> RobotInterface:
@@ -36,7 +44,7 @@ def parse_robot_config_from_string(code: str) -> RobotInterface:
 
 class Robot:
     
-    def __init__(self, configuration: RobotBuilder, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int, list[WeaponCommand]], None]):
+    def __init__(self, configuration: RobotBuilder, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int, list[WeaponCommand], RobotInfo], None]):
         self.configuration = configuration
         self.hull = get_hull_instance(configuration.hull)
         
