@@ -1,6 +1,5 @@
 TODO's
 
-more convinient way to edit ip and port settings
 optimize collision checking with spatial grid
 limit weapons you can add
 
@@ -30,6 +29,4 @@ bullet modifier:
 
 new stats:
     damage
-
-custom robot gui
 

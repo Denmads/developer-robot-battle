@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import queue
 import threading
 import pygame
@@ -18,7 +19,10 @@ ALLOWED_KEYS = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_a, pygame.K_s, pyga
 class GameClient:
     
     def __init__(self):
-        self.tcp_client = TCPClient(self._on_tcp_message, self._on_tcp_disconnect)
+        with open("client\\settings.json", "r") as f:
+            settings = json.loads(f.read())
+        
+        self.tcp_client = TCPClient(self._on_tcp_message, self._on_tcp_disconnect, settings["ip"], settings["port"])
         self.main_thread_tasks = queue.Queue()
         
     def start(self):

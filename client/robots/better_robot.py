@@ -3,7 +3,7 @@ from datetime import timedelta
 import pygame
 from common.robot import RobotBuilder, RobotInfo, RobotInterface, RobotStats
 from common.robot_hull import RobotHullType
-from common.weapon import WeaponConfig, WeaponCommand
+from common.weapon import WeaponConfig, WeaponCommand, WeaponType
 
 
 class MyRobot(RobotInterface):
@@ -11,7 +11,7 @@ class MyRobot(RobotInterface):
     def build_robot(self, builder: RobotBuilder) -> None:
         builder.hull = RobotHullType.TOUGH
         
-        builder.weapons.append(WeaponConfig("fl", 0.5, -0.5, 315))
+        builder.weapons.append(WeaponConfig("fl", 0.5, -0.5, 315, WeaponType.CANNON))
         builder.weapons.append(WeaponConfig("bl", -0.5, -0.5, 225))
         builder.weapons.append(WeaponConfig("br", -0.5, 0.5, 135))
         builder.weapons.append(WeaponConfig("fr", 0.5, 0.5, 45))
