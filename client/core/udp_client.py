@@ -5,7 +5,7 @@ import threading
 from typing import Callable
 
 from common.constants import MAX_UDP_PACKET_SIZE
-from common.udp_message import GameStateMessage, PlayerStaticInfoMessage, UDPMessage
+from common.udp_message import GameStateMessage, PlayerStaticInfoMessage, RobotStateMessage, UDPMessage
 
 
 class UDPClient:
@@ -38,6 +38,8 @@ class UDPClient:
                     message = PlayerStaticInfoMessage.from_bytes(full)
                 elif msg_type == 2:
                     message = GameStateMessage.from_bytes(full)
+                elif msg_type == 3:
+                    message = RobotStateMessage.from_bytes(full)
             
                 self.on_message_callback(message)
                 

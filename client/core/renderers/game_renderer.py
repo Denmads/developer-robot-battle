@@ -1,35 +1,43 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta, datetime
 import math
 import pygame
 
+from client.core.state_renderer import ClientState, SharedState, StateRenderer
 from common.calculations import calculate_weapon_point_offset
+from common.tcp_messages import ExitTestMessage, InputMessage, RoundStartedMessage
 from common.udp_message import GameStateMessage, PlayerStaticInfo
+
 
 @dataclass
 class RenderState:
     time: datetime
     state: GameStateMessage
-
-
-class GameRenderer:
     
-    def __init__(self):
+WEAPON_SHAPE_POINTS = [(-2.5, -2.5), (7.55, -2.5), (7.5, 2.5), (-2.5, 2.5)]
+
+ALLOWED_KEYS = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_a, pygame.K_s, pygame.K_d,
+                pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT]
+
+class GameStateRenderer(StateRenderer):
+    
+    def __init__(self, state: SharedState):
+        super().__init__(state)
+        
         self.states: list[RenderState] = []
         self.total_state_time: timedelta = timedelta()
         self.time_in_state: timedelta = timedelta()
+        
+        self.robot_state: dict = None
 
         self.static_player_info: dict[int, PlayerStaticInfo] = None
         self.arena_size: tuple[int, int] = None
         self.round_start_time: datetime = None
         self.round_winner: str = None
-
-        self.weapon_shape_points = [(-2.5, -2.5), (7.55, -2.5), (7.5, 2.5), (-2.5, 2.5)]
-
-        pygame.font.init()
+        
         self.announcement_font = pygame.font.SysFont("Arial", 72)
         self.announcement_secondary_font = pygame.font.SysFont("Arial", 56)
-
+    
     def add_new_state(self, state: GameStateMessage):
         self.states.append(RenderState(datetime.now(), state))
         self.time_in_state = timedelta()
@@ -39,21 +47,38 @@ class GameRenderer:
 
         if len(self.states) == 2:
             self.total_state_time = self.states[1].time - self.states[0].time
+            
+    def start_round(self, message: RoundStartedMessage):
+        self.round_start_time = datetime.fromisoformat(message.begin_time)
+        self.arena_size = (message.arena_width, message.arena_height)
+        
+    def set_winner(self, winner_id: str):
+        self.round_winner = winner_id
 
     def lerp(self, v1: float, v2: float, alpha: float) -> float:
         return v1 + (v2 - v1) * alpha
-
+    
+    def on_event(self, event: pygame.event.Event):
+        if event.type == pygame.KEYDOWN and event.key in ALLOWED_KEYS:
+            self.state.tcp.send(InputMessage(self.state.player_id, event.key, 1))
+        elif event.type == pygame.KEYUP and event.key in ALLOWED_KEYS:
+            self.state.tcp.send(InputMessage(self.state.player_id, event.key, 2))
+        elif self.state.client_state == ClientState.IN_TEST and event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE:
+            self.state.tcp.send(ExitTestMessage())
+    
     def render(self, screen: pygame.Surface, delta: timedelta):
         self.time_in_state += delta
         
         if len(self.states) < 2:
             return
 
-        alpha = self.time_in_state / self.total_state_time if self.total_state_time != 0 else 0
+        alpha = self.time_in_state / self.total_state_time if self.total_state_time.total_seconds() != 0 else 0
 
         self._draw_players(screen, alpha)
         self._draw_projectiles(screen, alpha)
         self._draw_player_health_and_energy_bars(screen, alpha)
+        
+        self.state.robot.interface.draw_gui(screen, self.robot_state)
 
         self._render_countdown_timer(screen)
         self._render_winner(screen)
@@ -99,7 +124,7 @@ class GameRenderer:
             for weapon in player_info.weapons:
                 transformed_points = [
                     calculate_weapon_point_offset((p_x, p_y), p_angle, (weapon.x_offset, weapon.y_offset), weapon.angle, point)
-                    for point in self.weapon_shape_points
+                    for point in WEAPON_SHAPE_POINTS
                 ]
                 pygame.draw.polygon(screen, (150, 150, 150), transformed_points)
                 
@@ -160,3 +185,4 @@ class GameRenderer:
         if self.round_winner:
             winner_surface = self.announcement_secondary_font.render(f"{self.round_winner} won", True, (255, 255, 255))
             screen.blit(winner_surface, (self.arena_size[0] / 2 - winner_surface.get_width() / 2, self.arena_size[1] / 2 - winner_surface.get_height() / 2 ))
+    

@@ -59,7 +59,7 @@ class Lobby:
         self.game = Game(
             self.players, 
             arena,
-            self.udp_socket.send_to_all, 
+            self.udp_socket, 
             self._on_game_ended, 
             start_time, 
             is_test)

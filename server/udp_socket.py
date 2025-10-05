@@ -23,6 +23,13 @@ class UDPSocket:
             for packet in packets:
                 self.socket.sendto(packet, (ip, player.udp_port))
             
+    def send_to_player(self, player: Player, data: UDPMessage):
+        packets = self._split_into_packets(data)
+        
+        ip, _ = player.sender.socket.getpeername()
+        for packet in packets:
+            self.socket.sendto(packet, (ip, player.udp_port))
+            
     def _split_into_packets(self, data: UDPMessage) -> list[bytes]:
         full_byte_data = data.to_bytes()
         

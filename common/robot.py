@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 import math
 from typing import Callable
 
+import pygame
+
 from common.robot_hull import RobotHullType, get_hull_instance
 from common.robot_stats import RobotStats
 from common.weapon import Weapon, WeaponConfig, WeaponCommand, get_weapon_stats
@@ -31,6 +33,12 @@ class RobotInterface:
     def do_ability(self, index: int, command_list: list[WeaponCommand], info: RobotInfo) -> None:
         pass
     
+    def get_state(self) -> dict:
+        pass
+    
+    def draw_gui(self, screen: pygame.Surface, state: dict) -> None:
+        pass
+    
 def parse_robot_config_from_string(code: str) -> RobotInterface:
     namespace = {}
     exec(code, namespace)
@@ -44,7 +52,8 @@ def parse_robot_config_from_string(code: str) -> RobotInterface:
 
 class Robot:
     
-    def __init__(self, configuration: RobotBuilder, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int, list[WeaponCommand], RobotInfo], None]):
+    def __init__(self, interface: RobotInterface, configuration: RobotBuilder, stats: RobotStats, x: int, y: int, angle: float, ability_func: Callable[[int, list[WeaponCommand], RobotInfo], None]):
+        self.interface = interface
         self.configuration = configuration
         self.hull = get_hull_instance(configuration.hull)
         
@@ -93,6 +102,7 @@ class Robot:
         configuration.build_robot(builder)
         
         return Robot(
+            configuration,
             builder,
             stats,
             start_x, 

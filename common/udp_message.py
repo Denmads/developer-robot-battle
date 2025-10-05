@@ -3,6 +3,8 @@ import random
 import colorsys
 import struct
 
+import msgpack
+
 from common.robot_hull import RobotHullType
 from common.weapon import WeaponType
 
@@ -150,3 +152,20 @@ class ProjectileState:
     y: float
     angle: float
     size: int
+    
+    
+class RobotStateMessage(UDPMessage):
+    state: dict
+    
+    def __init__(self):
+        super().__init__(3)
+            
+    def to_bytes(self) -> bytes:
+        return msgpack.packb(self.state, use_bin_type=True)
+    
+    @staticmethod
+    def from_bytes(data: bytes) -> UDPMessage:
+        message = RobotStateMessage()
+        message.state = msgpack.unpackb(data, raw=False)    
+        
+        return message

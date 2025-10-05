@@ -1,4 +1,6 @@
 from datetime import timedelta
+
+import pygame
 from common.robot import RobotBuilder, RobotInfo, RobotInterface, RobotStats
 from common.robot_hull import RobotHullType
 from common.weapon import WeaponConfig, WeaponCommand
@@ -39,3 +41,9 @@ class MyRobot(RobotInterface):
         elif index == 6:
             command_list.append(WeaponCommand("br"))
             command_list.append(WeaponCommand("fr"))
+            
+    def get_state(self) -> dict:
+        return {}
+    
+    def draw_gui(self, screen: pygame.Surface, state: dict) -> None:
+        pygame.draw.rect(screen, (255, 0, 0), (0,0,100,100))

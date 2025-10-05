@@ -9,11 +9,12 @@ from typing import Callable
 import pygame
 from common.arena import Arena
 from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset
-from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, WeaponStaticInfo
+from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, RobotStateMessage, WeaponStaticInfo
 from common.projectile import Projectile
 from common.robot import RobotInfo, Robot, RobotBuilder, RobotStats
 from common.weapon import WeaponCommand, get_weapon_stats
 from server.player import Player
+from server.udp_socket import UDPSocket
 
 
 @dataclass
@@ -50,6 +51,7 @@ class PlayerKeyState:
 @dataclass
 class PlayerInstance:
     idx: int
+    player: Player
     robot: Robot
     dead: bool = field(default=False, init=False)
     
@@ -59,9 +61,9 @@ class PlayerInstance:
 
 class Game:
     
-    def __init__(self, players: list[Player], arena: Arena, send_udp: Callable[[object], None], game_ended: Callable[[int], None], start_time: datetime, is_test: bool = False):
+    def __init__(self, players: list[Player], arena: Arena, udp: UDPSocket, game_ended: Callable[[int], None], start_time: datetime, is_test: bool = False):
         self.arena = arena
-        self.send_udp = send_udp
+        self.udp = udp
         self.game_ended_callback = game_ended
         self.is_test = is_test
         self.start_time = start_time
@@ -89,6 +91,7 @@ class Game:
             
             self.players[player.id] = PlayerInstance(
                 i,
+                player,
                 Robot.create(
                     player.robot_configuration,
                     middle_x + starting_dist_from_middle * math.cos(angle_step * i), 
@@ -111,7 +114,7 @@ class Game:
             
         message = PlayerStaticInfoMessage()
         message.player_info = player_info
-        self.send_udp(message)
+        self.udp.send_to_all(message)
         
         
     def _alive_players(self) -> list[PlayerInstance]:
@@ -145,7 +148,13 @@ class Game:
                     self.running = False
                     continue
                 
-            self.send_udp(self.get_state())
+            self.udp.send_to_all(self.get_state())
+            for id, instance in self.players.items():
+                robot_state = self.get_robot_state(id)
+                message = RobotStateMessage()
+                message.state = robot_state
+                self.udp.send_to_player(instance.player, message)
+            
             last_update = datetime.now()
             sleep(1 / 30) # 30 updates per second
         
@@ -196,34 +205,38 @@ class Game:
                 for w in player.robot.weapons.values()
             }
         )
-        if player.keys.q and not player.old_keys.q:
-            player.robot.ability_func(1, new_commands, info)
-        elif player.keys.w and not player.old_keys.w:
-            player.robot.ability_func(2, new_commands, info)
-        elif player.keys.e and not player.old_keys.e:
-            player.robot.ability_func(3, new_commands, info)
-        elif player.keys.a and not player.old_keys.a:
-            player.robot.ability_func(4, new_commands, info)
-        elif player.keys.s and not player.old_keys.s:
-            player.robot.ability_func(5, new_commands, info)
-        elif player.keys.d and not player.old_keys.d:
-            player.robot.ability_func(6, new_commands, info)
-            
-        if len(new_commands) > 0:
-            new_commands = list(filter(lambda c: c.id in player.robot.weapons , new_commands))
-            
-            for command in new_commands:
-                command.time = datetime.now()
+        
+        try:
+            if player.keys.q and not player.old_keys.q:
+                player.robot.ability_func(1, new_commands, info)
+            elif player.keys.w and not player.old_keys.w:
+                player.robot.ability_func(2, new_commands, info)
+            elif player.keys.e and not player.old_keys.e:
+                player.robot.ability_func(3, new_commands, info)
+            elif player.keys.a and not player.old_keys.a:
+                player.robot.ability_func(4, new_commands, info)
+            elif player.keys.s and not player.old_keys.s:
+                player.robot.ability_func(5, new_commands, info)
+            elif player.keys.d and not player.old_keys.d:
+                player.robot.ability_func(6, new_commands, info)
                 
-            total_energy_cost = calculate_ability_energy_cost(player.robot, new_commands)
+            if len(new_commands) > 0:
+                new_commands = list(filter(lambda c: c.id in player.robot.weapons , new_commands))
                 
-            if self._can_activate_ability(player, new_commands) and total_energy_cost <= player.robot.energy:
-                player.robot.energy -= total_energy_cost
-                fired_weapons = set([c.id for c in new_commands])
-                for weapon_id in fired_weapons:
-                    player.robot.weapons[weapon_id].cooldown_time_left = player.robot.weapons[weapon_id].stats.cooldown_seconds
+                for command in new_commands:
+                    command.time = datetime.now()
                     
-                self.player_commands[player.idx] += new_commands
+                total_energy_cost = calculate_ability_energy_cost(player.robot, new_commands)
+                    
+                if self._can_activate_ability(player, new_commands) and total_energy_cost <= player.robot.energy:
+                    player.robot.energy -= total_energy_cost
+                    fired_weapons = set([c.id for c in new_commands])
+                    for weapon_id in fired_weapons:
+                        player.robot.weapons[weapon_id].cooldown_time_left = player.robot.weapons[weapon_id].stats.cooldown_seconds
+                        
+                    self.player_commands[player.idx] += new_commands
+        except:
+            pass
             
     def _can_activate_ability(self, player: PlayerInstance, commands: list[WeaponCommand]):
         for weapon_id in set([c.id for c in commands]):
@@ -307,6 +320,10 @@ class Game:
         ]
         
         return state
+        
+    def get_robot_state(self, id: str) -> dict:
+        player = self.players[id]
+        return player.robot.interface.get_state()
         
     def update_key(self, player_id: str, key: int, state: int):
             is_down = state == 1
