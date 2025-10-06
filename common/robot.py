@@ -71,7 +71,7 @@ class Robot:
         
         self.max_energy = self.hull.max_energy + round(self.stats.max_energy * 5)
         self.energy = self.max_energy
-        self.energy_regen = self.hull.energy_regen + self.stats.energy_regen * 0.01
+        self.energy_regen = self.hull.energy_regen + self.stats.energy_regen * 0.02
         
         self.move_speed = self.hull.move_speed + self.stats.move_speed * 0.5
         self.turn_speed = self.hull.turn_speed + self.stats.turn_speed * 0.02

@@ -9,6 +9,9 @@ Then have a python virtual environment. Run the following commands:
 To run the client use the following command:
 `python -m client.main`
 
+### Settings
+Ip and port settings for the server can be changed in _client/settings.json_.
+
 ## Server
 To run the server use the following command:
 `python -m server.main`

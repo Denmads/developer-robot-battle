@@ -246,7 +246,7 @@ class Game:
         return True
             
     def _update_player(self, player: PlayerInstance, delta: timedelta):
-        player.robot.energy = math.ceil(min(player.robot.max_energy, player.robot.energy + player.robot.energy_regen))
+        player.robot.energy = min(player.robot.max_energy, player.robot.energy + player.robot.energy_regen)
         
         completed: list[WeaponCommand] = []
         for command in self.player_commands[player.idx]:
