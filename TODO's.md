@@ -1,9 +1,6 @@
 TODO's
 
-optimize collision checking with spatial grid
 limit weapons you can add
-
-expand robot sensory data with data on position, rotation, other players, bullets
 
 add ability modules:
     Shield Generator

@@ -13,14 +13,24 @@ class RobotBuilder:
     hull: RobotHullType = field(default=RobotHullType.STANDARD)
     weapons: list[WeaponConfig] = field(default_factory=list)
 
+@dataclass
+class ProjectileInfo:
+    x: float
+    y: float
+    angle: float
+    speed: float
 
 @dataclass
 class RobotInfo:
+    position: tuple[float, float]
+    angle: float
     hp: float
     max_hp: float
     energy: float
     max_energy: float
     cooldowns: dict[str, float]
+    enemies: list[tuple[float, float]]
+    projectiles: list[ProjectileInfo]
 
 class RobotInterface:
     

@@ -11,7 +11,7 @@ from common.arena import Arena
 from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, RobotStateMessage, WeaponStaticInfo
 from common.projectile import Projectile
-from common.robot import RobotInfo, Robot, RobotBuilder, RobotStats
+from common.robot import ProjectileInfo, RobotInfo, Robot, RobotBuilder, RobotStats
 from common.weapon import WeaponCommand, get_weapon_stats
 from server.player import Player
 from server.spatial_grid import SpatialGrid
@@ -199,6 +199,8 @@ class Game:
             
         new_commands: list[WeaponCommand] = []
         info = RobotInfo(
+            (player.robot.x, player.robot.y),
+            player.robot.angle,
             player.robot.hp,
             player.robot.max_hp,
             player.robot.energy,
@@ -206,7 +208,9 @@ class Game:
             {
                 w.id: w.cooldown_time_left
                 for w in player.robot.weapons.values()
-            }
+            },
+            [(pl.robot.x, pl.robot.y) for pl in self._alive_players()],
+            [ProjectileInfo(pr.x, pr.y, pr.angle, pr.speed) for pr in self.projectiles]
         )
         
         try:
