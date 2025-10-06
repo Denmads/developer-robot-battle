@@ -105,7 +105,7 @@ class GameStateMessage(UDPMessage):
         for p in self.players:
             buf += struct.pack(PlayerState.struct_format, p.idx, p.x, p.y, p.angle, p.hp, p.energy)
         for p in self.projectiles:
-            buf += struct.pack(ProjectileState.struct_format,p.id, p.x, p.y, p.angle, p.size)
+            buf += struct.pack(ProjectileState.struct_format,p.id, p.x, p.y, p.size)
             
         return bytes(buf)
     
@@ -145,12 +145,11 @@ class PlayerState:
     
 @dataclass
 class ProjectileState:
-    struct_format: str = field(default="<HfffH", init=False)
+    struct_format: str = field(default="<HffH", init=False)
     
     id: int
     x: float
     y: float
-    angle: float
     size: int
     
     

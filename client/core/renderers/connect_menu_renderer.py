@@ -104,6 +104,8 @@ class ConnectMenuStateRenderer(StateRenderer):
         for i, key in enumerate(["q", "w", "e", "a", "s", "d"]):
             commands = []
             self.state.robot.ability_func(i+1, commands, RobotInfo(
+                (0, 0),
+                0,
                 self.state.robot.hp,
                 self.state.robot.max_hp,
                 self.state.robot.energy,
@@ -111,7 +113,9 @@ class ConnectMenuStateRenderer(StateRenderer):
                 {
                     w.id: w.cooldown_time_left
                     for w in self.state.robot.weapons.values()
-                }
+                },
+                [(0, 0)],
+                []
             ))
             ability_stats[key] = {
                 "cost": round(calculate_ability_energy_cost(self.state.robot, commands), 1),

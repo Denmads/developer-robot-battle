@@ -4,13 +4,13 @@ from datetime import datetime, timedelta
 import math
 import random
 from time import sleep
-from typing import Callable
+from typing import Callable, Type
 
 import pygame
 from common.arena import Arena
-from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset
+from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset, rot
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, RobotStateMessage, WeaponStaticInfo
-from common.projectile import Projectile
+from common.projectile import BouncingProjectileModifierStats, HomingProjectileModifierStats, PiercingProjectileModifierStats, Projectile, ProjectileModifier, get_projectile_modifier_stats
 from common.robot import ProjectileInfo, RobotInfo, Robot, RobotBuilder, RobotStats
 from common.weapon import WeaponCommand, get_weapon_stats
 from server.player import Player
@@ -165,53 +165,10 @@ class Game:
         self.game_ended_callback(winner)
         
     def _update_from_input(self, player: PlayerInstance):
+        self._update_movement_from_input(player)
         
-        if player.keys.left:
-            player.robot.angle -= player.robot.turn_speed
-        if player.keys.right:
-            player.robot.angle += player.robot.turn_speed
-        
-        dx = player.robot.move_speed * math.cos(player.robot.angle)
-        dy = player.robot.move_speed * math.sin(player.robot.angle)
-        
-        new_pos_x = player.robot.x
-        new_pos_y = player.robot.y
-        
-        if player.keys.up:
-            new_pos_x = player.robot.x + dx
-            new_pos_y = player.robot.y + dy
-        if player.keys.down:
-            new_pos_x = player.robot.x - dx
-            new_pos_y = player.robot.y - dy
-                
-        if new_pos_x < player.robot.size:
-            new_pos_x = player.robot.x + (player.robot.x - player.robot.size) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
-        elif new_pos_x > self.arena.width - player.robot.size:
-            new_pos_x = player.robot.x + ((self.arena.width - player.robot.size) - player.robot.x) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
-
-        if new_pos_y < player.robot.size:
-            new_pos_y = player.robot.y + (player.robot.y - player.robot.size) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
-        elif new_pos_y > self.arena.height - player.robot.size:
-            new_pos_y = player.robot.y + ((self.arena.height - player.robot.size) - player.robot.y) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
-
-        player.robot.x = new_pos_x
-        player.robot.y = new_pos_y
-            
         new_commands: list[WeaponCommand] = []
-        info = RobotInfo(
-            (player.robot.x, player.robot.y),
-            player.robot.angle,
-            player.robot.hp,
-            player.robot.max_hp,
-            player.robot.energy,
-            player.robot.max_energy,
-            {
-                w.id: w.cooldown_time_left
-                for w in player.robot.weapons.values()
-            },
-            [(pl.robot.x, pl.robot.y) for pl in self._alive_players()],
-            [ProjectileInfo(pr.x, pr.y, pr.angle, pr.speed) for pr in self.projectiles]
-        )
+        info = self._get_robot_info(player)
         
         try:
             if player.keys.q and not player.old_keys.q:
@@ -245,6 +202,54 @@ class Game:
         except:
             pass
             
+    def _update_movement_from_input(self, player: PlayerInstance):
+        if player.keys.left:
+            player.robot.angle -= player.robot.turn_speed
+        if player.keys.right:
+            player.robot.angle += player.robot.turn_speed
+        
+        dx = player.robot.move_speed * math.cos(player.robot.angle)
+        dy = player.robot.move_speed * math.sin(player.robot.angle)
+        
+        new_pos_x = player.robot.x
+        new_pos_y = player.robot.y
+        
+        if player.keys.up:
+            new_pos_x = player.robot.x + dx
+            new_pos_y = player.robot.y + dy
+        if player.keys.down:
+            new_pos_x = player.robot.x - dx
+            new_pos_y = player.robot.y - dy
+                
+        if new_pos_x < player.robot.size:
+            new_pos_x = player.robot.x + (player.robot.x - player.robot.size) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
+        elif new_pos_x > self.arena.width - player.robot.size:
+            new_pos_x = player.robot.x + ((self.arena.width - player.robot.size) - player.robot.x) * math.cos(player.robot.angle) * (-1 if player.keys.down else 1)
+
+        if new_pos_y < player.robot.size:
+            new_pos_y = player.robot.y + (player.robot.y - player.robot.size) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
+        elif new_pos_y > self.arena.height - player.robot.size:
+            new_pos_y = player.robot.y + ((self.arena.height - player.robot.size) - player.robot.y) * math.sin(player.robot.angle) * (-1 if player.keys.down else 1)
+
+        player.robot.x = new_pos_x
+        player.robot.y = new_pos_y
+            
+    def _get_robot_info(self, player: PlayerInstance):
+        return RobotInfo(
+            (player.robot.x, player.robot.y),
+            player.robot.angle,
+            player.robot.hp,
+            player.robot.max_hp,
+            player.robot.energy,
+            player.robot.max_energy,
+            {
+                w.id: w.cooldown_time_left
+                for w in player.robot.weapons.values()
+            },
+            [(pl.robot.x, pl.robot.y) for pl in self._alive_players()],
+            [ProjectileInfo(pr.x, pr.y, pr.velocity, pr.speed) for pr in self.projectiles]
+        )
+            
     def _can_activate_ability(self, player: PlayerInstance, commands: list[WeaponCommand]):
         for weapon_id in set([c.id for c in commands]):
             if player.robot.weapons[weapon_id].cooldown_time_left > 0:
@@ -263,7 +268,19 @@ class Game:
                 sx, sy = calculate_weapon_point_offset((player.robot.x, player.robot.y), player.robot.angle, (weapon.x, weapon.y), weapon.angle, (7.5, 0))
                 p_angle = player.robot.angle + weapon.angle
                 
-                self.projectiles.append(Projectile(self.projectile_id_counter, player.idx, sx, sy, p_angle, weapon.stats.bullet_size, weapon.stats.bullet_speed, weapon.stats.base_damage))
+                self.projectiles.append(Projectile(
+                    self.projectile_id_counter, 
+                    player.idx, 
+                    sx, sy, 
+                    (
+                        math.cos(p_angle),
+                        math.sin(p_angle)    
+                    ), 
+                    weapon.stats.bullet_size, 
+                    weapon.stats.bullet_speed, 
+                    weapon.stats.base_damage,
+                    {mod: get_projectile_modifier_stats(mod) for mod in command.modifiers}
+                    ))
                 self.projectile_id_counter = (self.projectile_id_counter + 1) % 65000
                 
         for completed_command in completed:
@@ -271,12 +288,86 @@ class Game:
             
         for weapon in player.robot.weapons.values():
             weapon.cooldown_time_left = max(0, weapon.cooldown_time_left - delta.total_seconds())
+        
+    def _does_projectile_have_modifier(self, projectile: Projectile, type: ProjectileModifier) -> bool:
+        return type in projectile.modifiers
             
     def _update_projectile(self, projectile: Projectile):
-        projectile.x += projectile.speed * math.cos(projectile.angle)
-        projectile.y += projectile.speed * math.sin(projectile.angle)
+        if self._does_projectile_have_modifier(projectile, ProjectileModifier.HOMING):
+            self._handle_homing_projectile(projectile)
+        if self._does_projectile_have_modifier(projectile, ProjectileModifier.BOUNCING):
+            self._handle_bouncing_projectile(projectile)
+        
+        projectile.x += projectile.speed * projectile.velocity[0]
+        projectile.y += projectile.speed * projectile.velocity[1]
         
         self.spatial_grid.add_to_grid((projectile.x, projectile.y), projectile)
+
+    def _handle_homing_projectile(self, projectile: Projectile):
+        modifier_stats: HomingProjectileModifierStats = projectile.modifiers[ProjectileModifier.HOMING]
+        max_tracking_dist_squared = modifier_stats.max_tracking_dist * modifier_stats.max_tracking_dist
+            
+        closest_player: PlayerInstance = None
+        closest_dist: float = math.inf
+        for player in self._alive_players():
+            if player.idx == projectile.owner_idx:
+                continue
+                
+            x_diff = projectile.x - player.robot.x 
+            y_diff = projectile.y - player.robot.y
+            dist = x_diff * x_diff + y_diff * y_diff
+            if dist <=  max_tracking_dist_squared and dist < closest_dist:
+                closest_player = player
+                closest_dist = dist
+                    
+        if closest_player is not None:
+            x_diff = player.robot.x  - projectile.x
+            y_diff = player.robot.y - projectile.y
+            
+            projectile_angle = math.atan2(projectile.velocity[1], projectile.velocity[0])
+            angle_to_player = math.atan2(y_diff, x_diff)
+
+            angle_diff = angle_to_player - projectile_angle
+            angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
+            angle_diff_clamped = min(max(-modifier_stats.max_steering_per_tick, angle_diff), modifier_stats.max_steering_per_tick)
+
+            new_angle = projectile_angle + angle_diff_clamped
+            projectile.velocity = (
+                math.cos(new_angle),
+                math.sin(new_angle)
+            )
+            
+    def _handle_bouncing_projectile(self, projectile: Projectile):
+        modifier_stats: BouncingProjectileModifierStats = projectile.modifiers[ProjectileModifier.BOUNCING]
+           
+        if modifier_stats.bounces < modifier_stats.max_bounces:
+            if self._is_touching_screen_border_y(projectile):
+                modifier_stats.bounces += 1
+                projectile.velocity = self._reflect_projectile(projectile, 0)
+                
+        if modifier_stats.bounces < modifier_stats.max_bounces:
+            if self._is_touching_screen_border_x(projectile):
+                modifier_stats.bounces += 1
+                projectile.velocity = self._reflect_projectile(projectile, math.pi / 2)
+                
+    def _reflect_projectile(self, projectile: Projectile, wall_angle: float):
+        nx = -math.sin(wall_angle)
+        ny = math.cos(wall_angle)
+        
+        dot = projectile.velocity[0] * nx + projectile.velocity[1] * ny
+        
+        return (
+            projectile.velocity[0] - 2 * dot * nx,
+            projectile.velocity[1] - 2 * dot * ny
+        )
+                
+      
+    def _is_touching_screen_border_x(self, projectile: Projectile):
+        return projectile.x < projectile.size or projectile.x > self.arena.width - projectile.size
+    
+    def _is_touching_screen_border_y(self, projectile: Projectile):
+        return projectile.y < projectile.size or projectile.y > self.arena.height - projectile.size
+    
             
     def _is_outside_screen(self, projectile: Projectile):
         return projectile.x < -projectile.size or projectile.x > self.arena.width + projectile.size or projectile.y < -projectile.size or projectile.y > self.arena.height + projectile.size
@@ -300,11 +391,24 @@ class Game:
                     if euclidean_dist < player.robot.size * 2:
                         dist = math.pow(player.robot.x - projectile.x, 2) + math.pow(player.robot.y - projectile.y, 2)
                         if dist < robot_radius_2:
-                            projectile.destroy = True
-                            player.robot.hp -= projectile.damage
+                            
+                            if self._does_projectile_have_modifier(projectile, ProjectileModifier.PIERCING):
+                                modifier_stats: PiercingProjectileModifierStats = projectile.modifiers[ProjectileModifier.PIERCING]
+                                projectile.destroy = modifier_stats.piercings - 1 == modifier_stats.max_piercings
+                                if modifier_stats.piercings < modifier_stats.max_piercings and player.idx not in projectile.hit_players:
+                                    player.robot.hp -= projectile.damage
+                                    projectile.hit_players.append(player.idx)
+                                    modifier_stats.piercings += 1
+                                    
+                            else:
+                                player.robot.hp -= projectile.damage
+                                projectile.destroy = True
                             
                             if player.robot.hp <= 0:
                                 player.dead = True
+                        else:
+                            if player.idx in projectile.hit_players:
+                                projectile.hit_players.remove(player.idx)
                 
             
     def _get_player_bounding_box(self, player: PlayerInstance) -> list[tuple[float, float]]:
@@ -335,7 +439,6 @@ class Game:
                 projectile.id,
                 projectile.x,
                 projectile.y,
-                projectile.angle,
                 projectile.size
             )
             for projectile in self.projectiles

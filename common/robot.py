@@ -17,7 +17,7 @@ class RobotBuilder:
 class ProjectileInfo:
     x: float
     y: float
-    angle: float
+    velocity: tuple[float, float]
     speed: float
 
 @dataclass

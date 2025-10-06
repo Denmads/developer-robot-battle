@@ -150,11 +150,29 @@ The weapon command has the following parameters:
 |id|An id of a weapon configred in the _build_robot_ function. |True|
 |delay|How long after the ability is activated that the bullet should be fired.  |False|
 
+### Projectile Modifiers
+Weapon modifiers can be added to a weapon command like this:  
+`command_list.append(WeaponCommand("id", modifiers=[ProjectileModifier.HOMING]))`
+
+Multiple modifiers can be added to one weapon command. The currently existing modifiers is:  
+|Name             |Description                 |
+|-----------------|----------------------------|
+|HOMING|When a projectile is close enough it will home towards the closest enemy. |
+|PIERCING| Will allow the projectile to pierce 1 player.  |
+|BOUNCING| Will allow the projectil to bounce of the edges 2 times.  |
+
 ### Energy Cost
 The energy cost of a total ability is the sum of all weapon commands that is produced by calling the function with the given key index.  
   
-The cost of a single weapon command is calculated like this:
-`cost_of_command = weapon_base_cost * (weapon_consective_fire_increase ^ number_of_times_fired-1)`  
+The cost of a single weapon is calculated like this:  
+```python
+# base cost
+cost_of_command = weapon_base_cost * (weapon_consective_fire_increase ^ (number_of_times_fired-1))
+
+# full cost
+foreach modifier:
+cost_of_command *= modifier.cost_increase ^ num_projectiles_with_modifier
+```  
   
 OBS. The cost of an ability is calculated differently in the stats UI and during a game.  
 In the stats screen the cost is simply calculated for the initial state.  

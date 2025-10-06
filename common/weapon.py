@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from enum import IntEnum
 import math
 
+from common.projectile import ProjectileModifier
+
 
 @dataclass
 class Weapon:
@@ -72,5 +74,6 @@ def get_weapon_stats(type: WeaponType) -> WeaponStats:
 @dataclass
 class WeaponCommand:
     id: str
-    time: datetime = field(default_factory=datetime.now, init=False)
     delay: timedelta = field(default=timedelta(seconds=0))
+    modifiers: list[ProjectileModifier] = field(default_factory=list)
+    time: datetime = field(default_factory=datetime.now, init=False)

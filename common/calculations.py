@@ -1,6 +1,7 @@
 from collections import defaultdict
 import math
 
+from common.projectile import ProjectileModifier, get_projectile_modifier_stats
 from common.robot import Robot
 from common.weapon import WeaponCommand
 
@@ -32,16 +33,34 @@ def calculate_weapon_point_offset(
         
 def calculate_ability_energy_cost(robot: Robot, commands: list[WeaponCommand]) -> float:
     weapon_fire_counts: defaultdict[str, int] = defaultdict(int)
+    weapon_modifier_counts: defaultdict[tuple[str, ProjectileModifier], int] = defaultdict(int)
     for command in commands:
         weapon_fire_counts[command.id] += 1
+        
+        for modifier in command.modifiers:
+            weapon_modifier_counts[(command.id, modifier)] += 1
+        
+    modifier_cost: dict[ProjectileModifier, float] = {
+        modifier: get_projectile_modifier_stats(modifier).energy_cost_multiplier
+        for modifier in ProjectileModifier
+    }
         
     energy_cost = 0
     for weapon_id, fire_count in weapon_fire_counts.items():
         weapon_stats = robot.weapons[weapon_id].stats
-        energy_cost += weapon_stats.base_energy_cost * math.pow(weapon_stats.consecutive_energy_cost_factor, fire_count - 1)
+        weapon_energy_cost = weapon_stats.base_energy_cost * math.pow(weapon_stats.consecutive_energy_cost_factor, fire_count - 1)
+        
+        for modifier in ProjectileModifier:
+            if weapon_modifier_counts[(weapon_id, modifier)] > 0:
+                weapon_energy_cost *= math.pow(modifier_cost[modifier], weapon_modifier_counts[(weapon_id, modifier)])
+        
+        energy_cost += weapon_energy_cost
         
     return energy_cost
 
 def calculate_ability_cooldown(robot: Robot, commands: list[WeaponCommand]) -> float:
     weapons = [robot.weapons[id] for id in set([c.id for c in commands])]
+    if len(weapons) == 0:
+        return 0
+    
     return max(map(lambda w: w.stats.cooldown_seconds, weapons))
