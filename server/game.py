@@ -14,6 +14,7 @@ from common.projectile import Projectile
 from common.robot import RobotInfo, Robot, RobotBuilder, RobotStats
 from common.weapon import WeaponCommand, get_weapon_stats
 from server.player import Player
+from server.spatial_grid import SpatialGrid
 from server.udp_socket import UDPSocket
 
 
@@ -69,6 +70,7 @@ class Game:
         self.start_time = start_time
         
         self.player_commands: dict[int, list[WeaponCommand]] = {}
+        self.spatial_grid: SpatialGrid = SpatialGrid(100)
         
         self._initialize_players(players)
         
@@ -129,6 +131,7 @@ class Game:
         while self.running:
             if datetime.now() > self.start_time:
                 delta = datetime.now() - last_update
+                self.spatial_grid.clear()
                 for projectile in self.projectiles:
                     self._update_projectile(projectile)
 
@@ -268,30 +271,45 @@ class Game:
     def _update_projectile(self, projectile: Projectile):
         projectile.x += projectile.speed * math.cos(projectile.angle)
         projectile.y += projectile.speed * math.sin(projectile.angle)
+        
+        self.spatial_grid.add_to_grid((projectile.x, projectile.y), projectile)
             
     def _is_outside_screen(self, projectile: Projectile):
         return projectile.x < -projectile.size or projectile.x > self.arena.width + projectile.size or projectile.y < -projectile.size or projectile.y > self.arena.height + projectile.size
             
     def _check_collisions(self):
-        for projectile in self.projectiles:
-            if projectile.destroy:
-                continue
+        for player in self._alive_players():
+            bounding_box_corners = self._get_player_bounding_box(player)
+            bounding_box_grid_coords = set([self.spatial_grid.get_grid_coord(pos) for pos in bounding_box_corners])
             
-            for player in self._alive_players():
-                if player.idx == projectile.owner_idx:
-                    continue
+            for grid_coord in bounding_box_grid_coords:
+                for projectile in self.spatial_grid.get_bullets_in_grid_cell(grid_coord):
+                    if projectile.destroy:
+                        continue
+                    
+                    if player.idx == projectile.owner_idx:
+                        continue
+                    
+                    robot_radius_2 = player.robot.size * player.robot.size
+                    euclidean_dist = abs(player.robot.x - projectile.x) + abs(player.robot.y - projectile.y)
+                    
+                    if euclidean_dist < player.robot.size * 2:
+                        dist = math.pow(player.robot.x - projectile.x, 2) + math.pow(player.robot.y - projectile.y, 2)
+                        if dist < robot_radius_2:
+                            projectile.destroy = True
+                            player.robot.hp -= projectile.damage
+                            
+                            if player.robot.hp <= 0:
+                                player.dead = True
                 
-                robot_radius_2 = player.robot.size * player.robot.size
-                euclidean_dist = abs(player.robot.x - projectile.x) + abs(player.robot.y - projectile.y)
-                
-                if euclidean_dist < player.robot.size * 2:
-                    dist = math.pow(player.robot.x - projectile.x, 2) + math.pow(player.robot.y - projectile.y, 2)
-                    if dist < robot_radius_2:
-                        projectile.destroy = True
-                        player.robot.hp -= projectile.damage
-                        
-                        if player.robot.hp <= 0:
-                            player.dead = True
+            
+    def _get_player_bounding_box(self, player: PlayerInstance) -> list[tuple[float, float]]:
+        return [
+            (player.robot.x - player.robot.size, player.robot.y - player.robot.size),
+            (player.robot.x + player.robot.size, player.robot.y - player.robot.size),
+            (player.robot.x - player.robot.size, player.robot.y + player.robot.size),
+            (player.robot.x + player.robot.size, player.robot.y + player.robot.size)
+        ]
             
     def get_state(self) -> GameStateMessage:
         state = GameStateMessage()

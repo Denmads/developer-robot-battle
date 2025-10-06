@@ -14,8 +14,8 @@ class Arena:
         dist_from_middle = 200
         
         if num_players > 4:
-            width += ((num_players - 4) // 2) * 100
-            height += ((num_players - 4) // 2) * 75
-            dist_from_middle += ((num_players - 4) // 2) * 25
+            width += (min(8, num_players - 4) // 2) * 100
+            height += (min(8, num_players - 4) // 2) * 75
+            dist_from_middle += (min(8, num_players - 4) // 2) * 25
             
         return Arena(width, height, dist_from_middle)
