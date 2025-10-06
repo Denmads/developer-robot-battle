@@ -32,10 +32,11 @@ class MyRobot(RobotInterface):
         pass
 ```
 
-There is three parts to customizing your robot:
-* Parts
-* Stats
-* Abilities
+There is four parts to customizing your robot:
+* [Parts](#parts)
+* [Stats](#stats)
+* [Abilities](#abilities)
+* [GUI](#gui)
 
 The parts determines some base stats and what is available to use in the abilities.  
 The stats is extra customizable stat points put on top of the base stats.  
@@ -183,3 +184,23 @@ Then the total cost for the q(1) ability is:
 
 ### Cooldown
 Before an ability can be activated all of the weapons must have cooled down. Meaning the max cooldown time for an ability is corresponding to the cooldown of the weapon with the longest cooldown time.
+
+## GUI
+Each robot cna render some custom gui. The rendered GUI is only rendered for its own player.
+
+Custom GUI code is defined in the __draw_gui__ function.
+
+It is also possible to get a custom state from the robot, to use in rendering the custom gui.
+
+The variables, which is needed in the rendering function should be return in a dictionary in the __get_state__ function. The same object returned by the _get_state_ function is injected into the _draw_gui_ function.
+
+### Example  
+```python
+def get_state(self) -> dict:
+    return {
+        "test": 50
+    }
+    
+def draw_gui(self, screen: pygame.Surface, state: dict) -> None:
+    pygame.draw.rect(screen, (0, 255, 0), (state["test"],0,100,100))
+```
