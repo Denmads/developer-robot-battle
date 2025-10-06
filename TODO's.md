@@ -24,7 +24,7 @@ bullet effects:
 bullet modifier:
     Homing
     Explosive
-    Piecing
+    Piercing
     Bouncing
 
 new stats:
