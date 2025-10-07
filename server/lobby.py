@@ -8,7 +8,7 @@ from common.arena import Arena
 from common.robot import RobotInterface
 from common.tcp_messages import LobbyInfoMessage, LobbyJoinedMessage, RoundEndedMessage, RoundStartedMessage
 from server.game import Game
-from server.player import Player
+from common.player import Player
 from server.udp_socket import UDPSocket
 
 
@@ -69,8 +69,8 @@ class Lobby:
         self.game.stop()
         
     def _on_game_ended(self, winner_idx: int):
-        winner = self.players[winner_idx]
-        message = RoundEndedMessage(winner.id)
+        winner_id = self.players[winner_idx].id if not self.game.is_test else ""
+        message = RoundEndedMessage(winner_id)
         for player in self.players:
             player.sender.send(message)        
         

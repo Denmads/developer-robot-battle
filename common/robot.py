@@ -6,7 +6,8 @@ import pygame
 
 from common.robot_hull import RobotHullType, get_hull_instance
 from common.robot_stats import RobotStats
-from common.weapon import Weapon, WeaponConfig, WeaponCommand, get_weapon_stats
+from common.weapon import Weapon, WeaponConfig, get_weapon_stats
+from common.weapon_command import WeaponCommand
 
 @dataclass
 class RobotBuilder:

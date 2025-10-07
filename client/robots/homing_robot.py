@@ -2,7 +2,8 @@ import pygame
 from common.projectile import ProjectileModifier
 from common.robot import RobotBuilder, RobotInfo, RobotInterface, RobotStats
 from common.robot_hull import RobotHullType
-from common.weapon import WeaponConfig, WeaponCommand
+from common.weapon import WeaponConfig
+from common.weapon_command import WeaponCommand
 
 
 class MyRobot(RobotInterface):

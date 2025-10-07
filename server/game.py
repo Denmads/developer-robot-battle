@@ -1,6 +1,7 @@
 import colorsys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from functools import reduce
 import math
 import random
 from time import sleep
@@ -9,56 +10,14 @@ from typing import Callable, Type
 import pygame
 from common.arena import Arena
 from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset, rot
+from common.player_instance import PlayerInstance
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, RobotStateMessage, WeaponStaticInfo
-from common.projectile import BouncingProjectileModifierStats, HomingProjectileModifierStats, PiercingProjectileModifierStats, Projectile, ProjectileModifier, get_projectile_modifier_stats
-from common.robot import ProjectileInfo, RobotInfo, Robot, RobotBuilder, RobotStats
-from common.weapon import WeaponCommand, get_weapon_stats
-from server.player import Player
+from common.projectile import  Projectile, ProjectileModifier, get_projectile_modifier_stats
+from common.robot import ProjectileInfo, RobotInfo, Robot
+from common.weapon_command import WeaponCommand
+from common.player import Player
 from server.spatial_grid import SpatialGrid
 from server.udp_socket import UDPSocket
-
-
-@dataclass
-class PlayerKeyState:
-    up: bool = field(init=False, default=False)
-    down: bool = field(init=False, default=False)
-    left: bool = field(init=False, default=False)
-    right: bool = field(init=False, default=False)
-    
-    q: bool = field(init=False, default=False)
-    w: bool = field(init=False, default=False)
-    e: bool = field(init=False, default=False)
-    a: bool = field(init=False, default=False)
-    s: bool = field(init=False, default=False)
-    d: bool = field(init=False, default=False)
-    
-    def clone(self) -> "PlayerKeyState":
-        state = PlayerKeyState()
-        
-        state.up = self.up
-        state.down = self.down
-        state.left = self.left
-        state.right = self.right
-        
-        state.q = self.q
-        state.w = self.w
-        state.e = self.e
-        state.a = self.a
-        state.s = self.s
-        state.d = self.d
-        
-        return state
-
-@dataclass
-class PlayerInstance:
-    idx: int
-    player: Player
-    robot: Robot
-    dead: bool = field(default=False, init=False)
-    
-    # keys
-    old_keys: PlayerKeyState = field(init=False, default_factory=PlayerKeyState)
-    keys: PlayerKeyState = field(init=False, default_factory=PlayerKeyState)
 
 class Game:
     
@@ -293,81 +252,13 @@ class Game:
         return type in projectile.modifiers
             
     def _update_projectile(self, projectile: Projectile):
-        if self._does_projectile_have_modifier(projectile, ProjectileModifier.HOMING):
-            self._handle_homing_projectile(projectile)
-        if self._does_projectile_have_modifier(projectile, ProjectileModifier.BOUNCING):
-            self._handle_bouncing_projectile(projectile)
-        
+        for modifier in projectile.modifiers.values():
+            modifier.update(projectile, self._alive_players(), self.arena)
+
         projectile.x += projectile.speed * projectile.velocity[0]
         projectile.y += projectile.speed * projectile.velocity[1]
         
         self.spatial_grid.add_to_grid((projectile.x, projectile.y), projectile)
-
-    def _handle_homing_projectile(self, projectile: Projectile):
-        modifier_stats: HomingProjectileModifierStats = projectile.modifiers[ProjectileModifier.HOMING]
-        max_tracking_dist_squared = modifier_stats.max_tracking_dist * modifier_stats.max_tracking_dist
-            
-        closest_player: PlayerInstance = None
-        closest_dist: float = math.inf
-        for player in self._alive_players():
-            if player.idx == projectile.owner_idx:
-                continue
-                
-            x_diff = projectile.x - player.robot.x 
-            y_diff = projectile.y - player.robot.y
-            dist = x_diff * x_diff + y_diff * y_diff
-            if dist <=  max_tracking_dist_squared and dist < closest_dist:
-                closest_player = player
-                closest_dist = dist
-                    
-        if closest_player is not None:
-            x_diff = player.robot.x  - projectile.x
-            y_diff = player.robot.y - projectile.y
-            
-            projectile_angle = math.atan2(projectile.velocity[1], projectile.velocity[0])
-            angle_to_player = math.atan2(y_diff, x_diff)
-
-            angle_diff = angle_to_player - projectile_angle
-            angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
-            angle_diff_clamped = min(max(-modifier_stats.max_steering_per_tick, angle_diff), modifier_stats.max_steering_per_tick)
-
-            new_angle = projectile_angle + angle_diff_clamped
-            projectile.velocity = (
-                math.cos(new_angle),
-                math.sin(new_angle)
-            )
-            
-    def _handle_bouncing_projectile(self, projectile: Projectile):
-        modifier_stats: BouncingProjectileModifierStats = projectile.modifiers[ProjectileModifier.BOUNCING]
-           
-        if modifier_stats.bounces < modifier_stats.max_bounces:
-            if self._is_touching_screen_border_y(projectile):
-                modifier_stats.bounces += 1
-                projectile.velocity = self._reflect_projectile(projectile, 0)
-                
-        if modifier_stats.bounces < modifier_stats.max_bounces:
-            if self._is_touching_screen_border_x(projectile):
-                modifier_stats.bounces += 1
-                projectile.velocity = self._reflect_projectile(projectile, math.pi / 2)
-                
-    def _reflect_projectile(self, projectile: Projectile, wall_angle: float):
-        nx = -math.sin(wall_angle)
-        ny = math.cos(wall_angle)
-        
-        dot = projectile.velocity[0] * nx + projectile.velocity[1] * ny
-        
-        return (
-            projectile.velocity[0] - 2 * dot * nx,
-            projectile.velocity[1] - 2 * dot * ny
-        )
-                
-      
-    def _is_touching_screen_border_x(self, projectile: Projectile):
-        return projectile.x < projectile.size or projectile.x > self.arena.width - projectile.size
-    
-    def _is_touching_screen_border_y(self, projectile: Projectile):
-        return projectile.y < projectile.size or projectile.y > self.arena.height - projectile.size
-    
             
     def _is_outside_screen(self, projectile: Projectile):
         return projectile.x < -projectile.size or projectile.x > self.arena.width + projectile.size or projectile.y < -projectile.size or projectile.y > self.arena.height + projectile.size
@@ -379,10 +270,7 @@ class Game:
             
             for grid_coord in bounding_box_grid_coords:
                 for projectile in self.spatial_grid.get_bullets_in_grid_cell(grid_coord):
-                    if projectile.destroy:
-                        continue
-                    
-                    if player.idx == projectile.owner_idx:
+                    if projectile.destroy or player.idx == projectile.owner_idx:
                         continue
                     
                     robot_radius_2 = player.robot.size * player.robot.size
@@ -390,25 +278,18 @@ class Game:
                     
                     if euclidean_dist < player.robot.size * 2:
                         dist = math.pow(player.robot.x - projectile.x, 2) + math.pow(player.robot.y - projectile.y, 2)
-                        if dist < robot_radius_2:
+                        if dist <= robot_radius_2:
                             
-                            if self._does_projectile_have_modifier(projectile, ProjectileModifier.PIERCING):
-                                modifier_stats: PiercingProjectileModifierStats = projectile.modifiers[ProjectileModifier.PIERCING]
-                                projectile.destroy = modifier_stats.piercings - 1 == modifier_stats.max_piercings
-                                if modifier_stats.piercings < modifier_stats.max_piercings and player.idx not in projectile.hit_players:
-                                    player.robot.hp -= projectile.damage
-                                    projectile.hit_players.append(player.idx)
-                                    modifier_stats.piercings += 1
-                                    
-                            else:
+                            override_default_behaviour: bool = False
+                            for modifier in projectile.modifiers.values():
+                                override_default_behaviour |= modifier.on_player_hit(projectile, player)
+
+                            if not override_default_behaviour:
                                 player.robot.hp -= projectile.damage
                                 projectile.destroy = True
                             
                             if player.robot.hp <= 0:
                                 player.dead = True
-                        else:
-                            if player.idx in projectile.hit_players:
-                                projectile.hit_players.remove(player.idx)
                 
             
     def _get_player_bounding_box(self, player: PlayerInstance) -> list[tuple[float, float]]:
@@ -439,7 +320,8 @@ class Game:
                 projectile.id,
                 projectile.x,
                 projectile.y,
-                projectile.size
+                projectile.size,
+                reduce(lambda a, b: a | b, projectile.modifiers)
             )
             for projectile in self.projectiles
         ]

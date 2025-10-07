@@ -1,10 +1,9 @@
-import pickle
 import socket
 import struct
 
 from common.constants import MAX_UDP_PACKET_SIZE
 from common.udp_message import UDPMessage
-from server.player import Player
+from common.player import Player
 
 
 class UDPSocket:

@@ -3,7 +3,8 @@ from datetime import timedelta
 import pygame
 from common.robot import RobotBuilder, RobotInfo, RobotInterface, RobotStats
 from common.robot_hull import RobotHullType
-from common.weapon import WeaponConfig, WeaponCommand, WeaponType
+from common.weapon import WeaponConfig, WeaponType
+from common.weapon_command import WeaponCommand
 
 
 class MyRobot(RobotInterface):

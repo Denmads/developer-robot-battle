@@ -3,7 +3,7 @@ import math
 
 from common.projectile import ProjectileModifier, get_projectile_modifier_stats
 from common.robot import Robot
-from common.weapon import WeaponCommand
+from common.weapon_command import WeaponCommand
 
 def rot(vx, vy, a):
     cs = math.cos(a)
