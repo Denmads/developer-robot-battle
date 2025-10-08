@@ -321,7 +321,7 @@ class Game:
                 projectile.x,
                 projectile.y,
                 projectile.size,
-                reduce(lambda a, b: a | b, projectile.modifiers)
+                0 if len(projectile.modifiers) == 0 else reduce(lambda a, b: a | b, projectile.modifiers)
             )
             for projectile in self.projectiles
         ]

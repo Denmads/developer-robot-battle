@@ -20,7 +20,7 @@ class ProjectileModifierStats:
 
     def on_player_hit(self, projectile: "Projectile", player: PlayerInstance) -> bool:
         """Returns True if default hit behaviour should be skipped"""
-        pass
+        return False
     
 @dataclass
 class HomingProjectileModifierStats(ProjectileModifierStats):
@@ -83,6 +83,8 @@ class PiercingProjectileModifierStats(ProjectileModifierStats):
             player.robot.hp -= projectile.damage
             self.hit_players.append(player.idx)
             self.piercings += 1
+
+        return True
     
 @dataclass
 class BouncingProjectileModifierStats(ProjectileModifierStats):
