@@ -94,26 +94,29 @@ class WeaponStaticInfo:
 class GameStateMessage(UDPMessage):
     players: list["PlayerState"]
     projectiles: list["ProjectileState"]
+    explosions: list[tuple[int, int, int]] # x, y, radius
     
     def __init__(self):
         super().__init__(2)
     
     def to_bytes(self) -> bytes:
         buf = bytearray()
-        buf += struct.pack("<HH", len(self.players), len(self.projectiles))
+        buf += struct.pack("<HHH", len(self.players), len(self.projectiles), len(self.explosions))
         
         for p in self.players:
             buf += struct.pack(PlayerState.struct_format, p.idx, p.x, p.y, p.angle, p.hp, p.energy)
         for p in self.projectiles:
             buf += struct.pack(ProjectileState.struct_format,p.id, p.x, p.y, p.size, p.modifiers)
+        for e in self.explosions:
+            buf += struct.pack("<HHH", e[0], e[1], e[2])
             
         return bytes(buf)
     
     @staticmethod
     def from_bytes(data: bytes) -> UDPMessage:
         offset = 0
-        num_players, num_projectiles = struct.unpack_from("<HH", data, offset)
-        offset += 4
+        num_players, num_projectiles, num_explosions = struct.unpack_from("<HHH", data, offset)
+        offset += 6
         
         state = GameStateMessage()
         state.players = []
@@ -127,6 +130,12 @@ class GameStateMessage(UDPMessage):
             vals = struct.unpack_from(ProjectileState.struct_format, data, offset)
             state.projectiles.append(ProjectileState(*vals))
             offset += struct.calcsize(ProjectileState.struct_format)
+            
+        state.explosions = []
+        for _ in range(num_explosions):
+            vals = struct.unpack_from("<HHH", data, offset)
+            state.explosions.append(vals)
+            offset += struct.calcsize("<HHH")
         
         return state
     

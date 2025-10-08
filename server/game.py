@@ -12,7 +12,7 @@ from common.arena import Arena
 from common.calculations import calculate_ability_energy_cost, calculate_weapon_point_offset, rot
 from common.player_instance import PlayerInstance
 from common.udp_message import GameStateMessage, PlayerStaticInfo, PlayerStaticInfoMessage, PlayerState, ProjectileState, RobotStateMessage, WeaponStaticInfo
-from common.projectile import  Projectile, ProjectileModifier, get_projectile_modifier_stats
+from common.projectile import  BouncingProjectileModifierStats, ExplosiveProjectileModifierStats, Projectile, ProjectileModifier, get_projectile_modifier_stats
 from common.robot import ProjectileInfo, RobotInfo, Robot
 from common.weapon_command import WeaponCommand
 from common.player import Player
@@ -35,6 +35,8 @@ class Game:
         
         self.projectiles: list[Projectile] = []
         self.projectile_id_counter: int = 0
+        
+        self.explosions: list[tuple[int, int, int]] = []
         
         self.running = False
         
@@ -91,8 +93,9 @@ class Game:
             if datetime.now() > self.start_time:
                 delta = datetime.now() - last_update
                 self.spatial_grid.clear()
+                self.explosions.clear()
                 for projectile in self.projectiles:
-                    self._update_projectile(projectile)
+                    self._update_projectile(projectile, delta)
 
                 for player in self._alive_players():
                     
@@ -100,7 +103,7 @@ class Game:
                     player.old_keys = player.keys.clone()
                     self._update_player(player, delta)    
                     
-                for p in list(filter(self._is_outside_screen, self.projectiles)):
+                for p in list(filter(self._should_destroy_projectile, self.projectiles)):
                     p.destroy = True
                 self._check_collisions()
                 
@@ -238,7 +241,8 @@ class Game:
                     weapon.stats.bullet_size, 
                     weapon.stats.bullet_speed, 
                     weapon.stats.base_damage,
-                    {mod: get_projectile_modifier_stats(mod) for mod in command.modifiers}
+                    {mod: get_projectile_modifier_stats(mod) for mod in command.modifiers},
+                    weapon.stats.projectile_life_time
                     ))
                 self.projectile_id_counter = (self.projectile_id_counter + 1) % 65000
                 
@@ -251,17 +255,32 @@ class Game:
     def _does_projectile_have_modifier(self, projectile: Projectile, type: ProjectileModifier) -> bool:
         return type in projectile.modifiers
             
-    def _update_projectile(self, projectile: Projectile):
+    def _update_projectile(self, projectile: Projectile, delta: timedelta):
         for modifier in projectile.modifiers.values():
             modifier.update(projectile, self._alive_players(), self.arena)
 
+        projectile.old_x = projectile.x
+        projectile.old_y = projectile.y
         projectile.x += projectile.speed * projectile.velocity[0]
         projectile.y += projectile.speed * projectile.velocity[1]
         
+        if projectile.time_left_to_live is not None:
+            projectile.time_left_to_live -= delta
+            
+            if projectile.time_left_to_live.total_seconds() < 0:
+                projectile.destroy = True
+        
         self.spatial_grid.add_to_grid((projectile.x, projectile.y), projectile)
             
-    def _is_outside_screen(self, projectile: Projectile):
-        return projectile.x < -projectile.size or projectile.x > self.arena.width + projectile.size or projectile.y < -projectile.size or projectile.y > self.arena.height + projectile.size
+    def _should_destroy_projectile(self, projectile: Projectile):
+        is_outside_screen = projectile.x < -projectile.size or projectile.x > self.arena.width + projectile.size or projectile.y < -projectile.size or projectile.y > self.arena.height + projectile.size
+        
+        if ProjectileModifier.BOUNCING in projectile.modifiers:
+            modifier: BouncingProjectileModifierStats = projectile.modifiers[ProjectileModifier.BOUNCING]
+            has_bounced = modifier.bounces <= modifier.max_bounces
+            return not has_bounced and is_outside_screen
+        else:
+            return is_outside_screen
             
     def _check_collisions(self):
         for player in self._alive_players():
@@ -273,23 +292,22 @@ class Game:
                     if projectile.destroy or player.idx == projectile.owner_idx:
                         continue
                     
-                    robot_radius_2 = player.robot.size * player.robot.size
-                    euclidean_dist = abs(player.robot.x - projectile.x) + abs(player.robot.y - projectile.y)
-                    
-                    if euclidean_dist < player.robot.size * 2:
-                        dist = math.pow(player.robot.x - projectile.x, 2) + math.pow(player.robot.y - projectile.y, 2)
-                        if dist <= robot_radius_2:
+                    if self._segment_circle_intersect((projectile.old_x, projectile.old_y), (projectile.x, projectile.y), (player.robot.x, player.robot.y), player.robot.size):
                             
-                            override_default_behaviour: bool = False
-                            for modifier in projectile.modifiers.values():
-                                override_default_behaviour |= modifier.on_player_hit(projectile, player)
+                        override_default_behaviour: bool = False
+                        for modifier in projectile.modifiers.values():
+                            override_default_behaviour |= modifier.on_player_hit(projectile, player, self._alive_players())
 
-                            if not override_default_behaviour:
-                                player.robot.hp -= projectile.damage
-                                projectile.destroy = True
-                            
-                            if player.robot.hp <= 0:
-                                player.dead = True
+                        if not override_default_behaviour:
+                            player.robot.hp -= projectile.damage
+                            projectile.destroy = True
+                        
+                        if ProjectileModifier.EXPLOSIVE in projectile.modifiers:
+                            modifier: ExplosiveProjectileModifierStats = projectile.modifiers[ProjectileModifier.EXPLOSIVE]
+                            self.explosions.append((round(projectile.x), round(projectile.y), modifier.explosion_radius))
+                        
+                        if player.robot.hp <= 0:
+                            player.dead = True
                 
             
     def _get_player_bounding_box(self, player: PlayerInstance) -> list[tuple[float, float]]:
@@ -299,6 +317,39 @@ class Game:
             (player.robot.x - player.robot.size, player.robot.y + player.robot.size),
             (player.robot.x + player.robot.size, player.robot.y + player.robot.size)
         ]
+           
+    def _segment_circle_intersect(self, old_pos: tuple[float, float], new_pos: tuple[float, float], circle_center: tuple[float, float], circle_radius: float) -> bool:
+        # Unpack coordinates
+        x1, y1 = old_pos
+        x2, y2 = new_pos
+        cx, cy = circle_center
+
+        # Direction vector of the segment
+        dx = x2 - x1
+        dy = y2 - y1
+        
+        # If the bullet isn't moving, just check distance to the center
+        if dx == 0 and dy == 0:
+            dist_sq = (x1 - cx)**2 + (y1 - cy)**2
+            return dist_sq <= circle_radius**2
+
+        # Vector from circle center to segment start
+        fx = x1 - cx
+        fy = y1 - cy
+
+        a = dx*dx + dy*dy
+        b = 2 * (fx*dx + fy*dy)
+        c = fx*fx + fy*fy - circle_radius*circle_radius
+
+        discriminant = b*b - 4*a*c
+        if discriminant < 0:
+            return False  # No intersection
+
+        discriminant = math.sqrt(discriminant)
+        t1 = (-b - discriminant) / (2*a)
+        t2 = (-b + discriminant) / (2*a)
+
+        return (0 <= t1 <= 1) or (0 <= t2 <= 1)
             
     def get_state(self) -> GameStateMessage:
         state = GameStateMessage()
@@ -325,6 +376,8 @@ class Game:
             )
             for projectile in self.projectiles
         ]
+        
+        state.explosions = self.explosions
         
         return state
         

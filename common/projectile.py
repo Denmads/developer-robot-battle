@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import timedelta
 from enum import IntEnum
 import math
 
@@ -18,7 +19,7 @@ class ProjectileModifierStats:
     def update(self, projectile: "Projectile", alive_players: list[PlayerInstance], arena: Arena):
         pass
 
-    def on_player_hit(self, projectile: "Projectile", player: PlayerInstance) -> bool:
+    def on_player_hit(self, projectile: "Projectile", hit_player: PlayerInstance, alive_players: list[PlayerInstance]) -> bool:
         """Returns True if default hit behaviour should be skipped"""
         return False
     
@@ -64,6 +65,26 @@ class HomingProjectileModifierStats(ProjectileModifierStats):
 class ExplosiveProjectileModifierStats(ProjectileModifierStats):
     explosion_radius: int
     
+    def on_player_hit(self, projectile: "Projectile", hit_player: PlayerInstance, alive_players: list[PlayerInstance]):
+        projectile.destroy = True
+        
+        hit_player.robot.hp -= projectile.damage
+        
+        for player in alive_players:
+            if player.idx == projectile.owner_idx or player.idx == hit_player.idx:
+                continue
+                
+            x_diff = projectile.x - player.robot.x 
+            y_diff = projectile.y - player.robot.y
+            dist = x_diff * x_diff + y_diff * y_diff
+            
+            range_squared = (self.explosion_radius + player.robot.size) ** 2
+            
+            if dist <=  range_squared:
+                player.robot.hp -= projectile.damage * 0.5
+
+        return True
+    
 @dataclass
 class PiercingProjectileModifierStats(ProjectileModifierStats):
     max_piercings: int
@@ -77,11 +98,11 @@ class PiercingProjectileModifierStats(ProjectileModifierStats):
             if dist > player.robot.size * player.robot.size:
                 self.hit_players.remove(player.idx)
 
-    def on_player_hit(self, projectile: "Projectile", player: PlayerInstance):
+    def on_player_hit(self, projectile: "Projectile", hit_player: PlayerInstance, alive_players: list[PlayerInstance]):
         projectile.destroy = self.piercings - 1 == self.max_piercings
-        if self.piercings < self.max_piercings and player.idx not in self.hit_players:
-            player.robot.hp -= projectile.damage
-            self.hit_players.append(player.idx)
+        if self.piercings < self.max_piercings and hit_player.idx not in self.hit_players:
+            hit_player.robot.hp -= projectile.damage
+            self.hit_players.append(hit_player.idx)
             self.piercings += 1
 
         return True
@@ -151,11 +172,13 @@ class Projectile:
     owner_idx: str
     x: int
     y: int
+    old_x: int = field(default=0, init=False)
+    old_y: int = field(default=0, init=False)
     velocity: tuple[float, float]
     size: int
     speed: float
     damage: int
-    
     modifiers: dict[ProjectileModifier, ProjectileModifierStats]
+    time_left_to_live: timedelta | None = field(default=None)
     
     destroy: bool = field(default=False, init=False)

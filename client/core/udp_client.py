@@ -22,6 +22,10 @@ class UDPClient:
     def _udp_listener(self):
         while True:
             data, _ = self.udp_socket.recvfrom(MAX_UDP_PACKET_SIZE * 2)
+            
+            if len(data) < 8:
+                continue
+            
             header_raw, chunk = data.split(b"||", 1)
             msg_id, msg_type, part_idx, part_count =  struct.unpack_from("<HHHH", header_raw, 0)
             

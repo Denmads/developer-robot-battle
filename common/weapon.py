@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import timedelta
 from enum import IntEnum
 import math
 
@@ -16,7 +17,9 @@ class Weapon:
 
 class WeaponType(IntEnum):
     STANDARD = 1,
-    CANNON = 2
+    CANNON = 2,
+    SNIPER = 3,
+    MINE_DEPLOYER = 4
 
 @dataclass
 class WeaponConfig:
@@ -42,10 +45,11 @@ class WeaponStats:
     base_damage: float
     bullet_size: int
     bullet_speed: float
+    projectile_life_time: timedelta | None = field(default=None)
     
 STANDARD_WEAPON_STATS = WeaponStats(
     base_energy_cost=5,
-    consecutive_energy_cost_factor=1.10,
+    consecutive_energy_cost_factor=1.20,
     cooldown_seconds=0.5,
     base_damage=3,
     bullet_size=5,
@@ -61,9 +65,32 @@ CANNON_WEAPON_STATS = WeaponStats(
     bullet_speed=3
 )
 
+SNIPER_WEAPON_STATS = WeaponStats(
+    base_energy_cost=10,
+    consecutive_energy_cost_factor=1.10,
+    cooldown_seconds=2,
+    base_damage=8,
+    bullet_size=3,
+    bullet_speed=25
+)
+
+MINE_DEPLOYER_WEAPON_STATS =  WeaponStats(
+    base_energy_cost=10,
+    consecutive_energy_cost_factor=1.10,
+    cooldown_seconds=2,
+    base_damage=15,
+    bullet_size=8,
+    bullet_speed=0,
+    projectile_life_time=timedelta(seconds=5)
+)
+
 def get_weapon_stats(type: WeaponType) -> WeaponStats:
     if type == WeaponType.STANDARD:
         return STANDARD_WEAPON_STATS
     elif type == WeaponType.CANNON:
         return CANNON_WEAPON_STATS
+    elif type == WeaponType.SNIPER:
+        return SNIPER_WEAPON_STATS
+    elif type == WeaponType.MINE_DEPLOYER:
+        return MINE_DEPLOYER_WEAPON_STATS
     

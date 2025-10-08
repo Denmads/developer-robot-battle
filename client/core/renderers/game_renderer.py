@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from datetime import timedelta, datetime
+import logging
 import math
 import pygame
 
 from client.core.state_renderer import ClientState, SharedState, StateRenderer
 from common.calculations import calculate_weapon_point_offset
+from common.projectile import ProjectileModifier
 from common.tcp_messages import ExitTestMessage, InputMessage, RoundStartedMessage
 from common.udp_message import GameStateMessage, PlayerStaticInfo
 
@@ -29,6 +31,9 @@ class GameStateRenderer(StateRenderer):
         self.time_in_state: timedelta = timedelta()
         
         self.robot_state: dict = None
+        
+        self.explosion_life_time: timedelta = timedelta(seconds=1)
+        self.active_explosions: list[list[tuple[int, int, int], timedelta]] = []
 
         self.static_player_info: dict[int, PlayerStaticInfo] = None
         self.arena_size: tuple[int, int] = None
@@ -41,6 +46,9 @@ class GameStateRenderer(StateRenderer):
     def add_new_state(self, state: GameStateMessage):
         self.states.append(RenderState(datetime.now(), state))
         self.time_in_state = timedelta()
+        
+        for expl in state.explosions:
+            self.active_explosions.append([expl, timedelta(seconds=self.explosion_life_time.total_seconds())])
 
         if len(self.states) > 2:
             self.states.pop(0)
@@ -71,17 +79,27 @@ class GameStateRenderer(StateRenderer):
         
         if len(self.states) < 2:
             return
-
-        alpha = self.time_in_state / self.total_state_time if self.total_state_time.total_seconds() != 0 else 0
-
-        self._draw_players(screen, alpha)
-        self._draw_projectiles(screen, alpha)
-        self._draw_player_health_and_energy_bars(screen, alpha)
         
-        self.state.robot.interface.draw_gui(screen, self.robot_state)
+        for ex in self.active_explosions:
+            ex[1] -= delta
+        
+        alpha = self.time_in_state / self.total_state_time if self.total_state_time.total_seconds() != 0 else 0
+        try:
 
-        self._render_countdown_timer(screen)
-        self._render_winner(screen)
+            self._draw_players(screen, alpha)
+            self._draw_projectiles(screen, alpha)
+            self._draw_explosions(screen, delta)
+            self._draw_player_health_and_energy_bars(screen, alpha)
+            
+            self.state.robot.interface.draw_gui(screen, self.robot_state)
+
+            self._render_countdown_timer(screen)
+            self._render_winner(screen)
+            
+        except Exception as ex:
+            logging.getLogger().exception(ex)
+            
+        self.active_explosions = list(filter(lambda ex: ex[1].total_seconds() > 0, self.active_explosions))
         
     def _draw_players(self, screen: pygame.Surface, alpha: float):
         for p_idx in range(len(self.states[1].state.players)):
@@ -91,6 +109,7 @@ class GameStateRenderer(StateRenderer):
             
             p_x = self.lerp(player_s0.x, player_s1.x, alpha)
             p_y = self.lerp(player_s0.y, player_s1.y, alpha)
+            
             p_angle = self.lerp(player_s0.angle, player_s1.angle, alpha)
 
             # DRAW PLAYER AND DIRECTION MARKER
@@ -140,8 +159,37 @@ class GameStateRenderer(StateRenderer):
 
             p_x = self.lerp(proj_s0.x, proj_s1.x, alpha)
             p_y = self.lerp(proj_s0.y, proj_s1.y, alpha)
-
-            pygame.draw.circle(screen, (253, 216, 53), (p_x, p_y), proj_s1.size)
+            
+            dx = p_x - proj_s0.x
+            dy = p_y - proj_s0.y
+            dist = dx * dx + dy * dy
+            
+            dx_n = dx / dist if dist != 0 else 0
+            dy_n = dy / dist if dist != 0 else 0
+            
+            if proj_s1.modifiers & ProjectileModifier.BOUNCING > 0:
+                pygame.draw.circle(screen, (124, 179, 66), (p_x, p_y), proj_s1.size + 2, 2)
+                
+            if proj_s1.modifiers & ProjectileModifier.HOMING > 0:
+                pygame.draw.circle(screen, (171, 71, 188, 205), (p_x - (proj_s1.size + 10) * dx_n, p_y - (proj_s1.size + 10) * dy_n), proj_s1.size * 0.8)
+                pygame.draw.circle(screen, (171, 71, 188, 135), (p_x - (proj_s1.size + 20) * dx_n, p_y - (proj_s1.size + 20) * dy_n), proj_s1.size * 0.5)
+                pygame.draw.circle(screen, (171, 71, 188, 25), (p_x - (proj_s1.size + 30) * dx_n, p_y - (proj_s1.size + 30) * dy_n), proj_s1.size * 0.2)
+                    
+            if proj_s1.modifiers & ProjectileModifier.PIERCING > 0:
+                pygame.draw.circle(screen, (84, 110, 122, 205), (p_x + (proj_s1.size * 4) * dx_n, p_y + (proj_s1.size * 4) * dy_n), proj_s1.size * 0.8)
+            
+            color = (211, 47, 47) if proj_s1.modifiers & ProjectileModifier.EXPLOSIVE > 0 else (253, 216, 53)
+            pygame.draw.circle(screen, color, (p_x, p_y), proj_s1.size)
+            
+    def _draw_explosions(self, screen: pygame.Surface, delta: timedelta):
+        for explosion in self.active_explosions:
+            expl_progress = explosion[1] / self.explosion_life_time
+            size = self.lerp(1, explosion[0][2], expl_progress)
+            
+            circle_surf = pygame.Surface((size*2, size*2), pygame.SRCALPHA)
+            pygame.draw.circle(circle_surf, (211, 47, 47, 55), (size, size), size)
+            
+            screen.blit(circle_surf, (explosion[0][0] - size, explosion[0][1] - size))
             
     def _draw_player_health_and_energy_bars(self, screen: pygame.Surface, alpha: float):
         for p_idx in range(len(self.states[1].state.players)):
