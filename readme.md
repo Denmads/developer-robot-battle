@@ -159,7 +159,8 @@ Multiple modifiers can be added to one weapon command. The currently existing mo
 |-----------------|----------------------------|
 |HOMING|When a projectile is close enough it will home towards the closest enemy. |
 |PIERCING| Will allow the projectile to pierce 1 player.  |
-|BOUNCING| Will allow the projectil to bounce of the edges 2 times.  |
+|BOUNCING| Will allow the projectile to bounce of the edges 2 times.  |
+|EXPLOSIVE| The projectile will explode on impact.  |
 
 ### Energy Cost
 The energy cost of a total ability is the sum of all weapon commands that is produced by calling the function with the given key index.  
