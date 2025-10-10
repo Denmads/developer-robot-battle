@@ -58,8 +58,10 @@ class GameClient:
             client_state=ClientState.NOT_CONNECTED,
             tcp=self.tcp_client,
             udp_port=int(udp_port),
+            controller_connected=pygame.joystick.get_count() > 0,
+            controller=pygame.joystick.Joystick(0) if pygame.joystick.get_count() > 0 else None,
             font_header=pygame.font.SysFont("Arial", 20),
-            font_text=pygame.font.SysFont("Arial", 16)
+            font_text=pygame.font.SysFont("Arial", 16),
         )
         
         self.connect_menu_renderer = ConnectMenuStateRenderer(self.shared_state)
@@ -127,6 +129,15 @@ class GameClient:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+                    
+                if event.type == pygame.JOYDEVICEADDED:
+                    self.shared_state.controller_connected = True
+                    if pygame.joystick.get_count() == 1:
+                        self.shared_state.controller = pygame.joystick.Joystick(0)
+                elif event.type == pygame.JOYDEVICEREMOVED and pygame.joystick.get_count() == 0:
+                    self.shared_state.controller_connected = False
+                    self.shared_state.controller = None
+                    
                 if self.shared_state.client_state == ClientState.NOT_CONNECTED:
                     self.connect_menu_renderer.on_event(event)
                 elif self.shared_state.client_state == ClientState.IN_LOBBY:

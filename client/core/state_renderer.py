@@ -22,10 +22,13 @@ class SharedState:
     client_state: ClientState
     tcp: TCPClient
     udp_port: int
+    controller_connected: bool
+    controller: pygame.joystick.JoystickType | None
     
     robot: Robot = field(default=None, init=False)
     font_header: pygame.font.Font
     font_text: pygame.font.Font
+    
 
 class StateRenderer:
     

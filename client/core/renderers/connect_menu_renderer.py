@@ -18,8 +18,6 @@ class ConnectMenuStateRenderer(StateRenderer):
         self.all_robots = glob.glob(self.state.path + "\\robots\\*.py")
         self.current_selected_robot: int = 0
         
-        self.controller_connected: bool = pygame.joystick.get_count() > 0
-        
         self.controller_up_prev_active: bool = False
         self.controller_down_prev_active: bool = False
         self.controller_up_active: bool = False
@@ -66,7 +64,7 @@ class ConnectMenuStateRenderer(StateRenderer):
         self._render_robot_selector(screen)
         self._render_robot_stats(screen)
         
-        render_text_bottom_right_at(screen, f"Press 'Enter'{' / A' if self.controller_connected else ''} to connect...", self.state.menu_size[0] - 50, self.state.menu_size[1] - 50, self.state.font_text)
+        render_text_bottom_right_at(screen, f"Press 'Enter'{' / A' if self.state.controller_connected else ''} to connect...", self.state.menu_size[0] - 50, self.state.menu_size[1] - 50, self.state.font_text)
         
     def _render_robot_selector(self, screen: pygame.Surface):
         render_text_top_left_at(screen, "Robots:", 50, 50, self.state.font_header)
