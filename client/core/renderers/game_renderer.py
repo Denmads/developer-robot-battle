@@ -6,6 +6,7 @@ import pygame
 
 from client.core.state_renderer import ClientState, SharedState, StateRenderer
 from common.calculations import calculate_weapon_point_offset
+from common.constants import MIN_AXIS_VALUE
 from common.projectile import ProjectileModifier
 from common.tcp_messages import ExitTestMessage, InputMessage, RoundStartedMessage
 from common.udp_message import GameStateMessage, PlayerStaticInfo
@@ -25,6 +26,19 @@ class GameStateRenderer(StateRenderer):
     
     def __init__(self, state: SharedState):
         super().__init__(state)
+        
+        self.controller_left_active: bool = False
+        self.controller_left_active_prev: bool = False
+        self.controller_right_active: bool = False
+        self.controller_right_active_prev: bool = False
+        self.controller_up_active: bool = False
+        self.controller_up_active_prev: bool = False
+        self.controller_down_active: bool = False
+        self.controller_down_active_prev: bool = False
+        self.controller_rtrig_active: bool = False
+        self.controller_rtrig_active_prev: bool = False
+        self.controller_ltrig_active: bool = False
+        self.controller_ltrig_active_prev: bool = False
         
         self.states: list[RenderState] = []
         self.total_state_time: timedelta = timedelta()
@@ -71,8 +85,77 @@ class GameStateRenderer(StateRenderer):
             self.state.tcp.send(InputMessage(self.state.player_id, event.key, 1))
         elif event.type == pygame.KEYUP and event.key in ALLOWED_KEYS:
             self.state.tcp.send(InputMessage(self.state.player_id, event.key, 2))
-        elif self.state.client_state == ClientState.IN_TEST and event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE:
+        elif self.state.client_state == ClientState.IN_TEST and ((event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE) or (event.type == pygame.JOYBUTTONDOWN and event.button == 4)): # button 4 == L Bumper
             self.state.tcp.send(ExitTestMessage())
+        
+        # Controller
+        if event.type == pygame.JOYAXISMOTION:
+            if event.axis == 0: # X L-stick
+                self.controller_left_active = event.value < -1 * MIN_AXIS_VALUE * 6
+                self.controller_right_active = event.value > MIN_AXIS_VALUE * 6
+                
+                if self.controller_left_active and not self.controller_left_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_LEFT, 1))
+                elif not self.controller_left_active and self.controller_left_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_LEFT, 2))
+                    
+                if self.controller_right_active and not self.controller_right_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_RIGHT, 1))
+                elif not self.controller_right_active and self.controller_right_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_RIGHT, 2))
+            elif event.axis == 1: # Y L-stick
+                self.controller_up_active = event.value < -1 * MIN_AXIS_VALUE * 6
+                self.controller_down_active = event.value > MIN_AXIS_VALUE * 6
+                
+                if self.controller_up_active and not self.controller_up_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_UP, 1))
+                elif not self.controller_up_active and self.controller_up_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_UP, 2))
+                    
+                if self.controller_down_active and not self.controller_down_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_DOWN, 1))
+                elif not self.controller_down_active and self.controller_down_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_DOWN, 2))
+            elif event.axis == 4: # L Trig
+                self.controller_ltrig_active = event.value < -1 + MIN_AXIS_VALUE * 6
+                
+                if self.controller_ltrig_active and not self.controller_ltrig_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_q, 1))
+                elif not self.controller_ltrig_active and self.controller_ltrig_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_q, 2))
+            elif event.axis == 5: # R Trig
+                self.controller_rtrig_active = event.value < -1 + MIN_AXIS_VALUE * 6
+                
+                if self.controller_rtrig_active and not self.controller_rtrig_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_e, 1))
+                elif not self.controller_rtrig_active and self.controller_rtrig_active_prev:
+                    self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_e, 2))
+        elif event.type == pygame.JOYBUTTONDOWN:
+            if event.button == 0: # A
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_s, 1))
+            elif event.button == 1: # B
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_d, 1))
+            elif event.button == 2: # X
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_a, 1))
+            elif event.button == 3: # Y
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_w, 1))
+        elif event.type == pygame.JOYBUTTONUP:
+            if event.button == 0: # A
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_s, 2))
+            elif event.button == 1: # B
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_d, 2))
+            elif event.button == 2: # X
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_a, 2))
+            elif event.button == 3: # Y
+                self.state.tcp.send(InputMessage(self.state.player_id, pygame.K_w, 2))
+                
+                
+        self.controller_left_active_prev = self.controller_left_active
+        self.controller_right_active_prev = self.controller_right_active
+        self.controller_up_active_prev = self.controller_up_active
+        self.controller_down_active_prev = self.controller_down_active
+        self.controller_rtrig_active_prev = self.controller_rtrig_active
+        self.controller_ltrig_active_prev = self.controller_ltrig_active
     
     def render(self, screen: pygame.Surface, delta: timedelta):
         self.time_in_state += delta

@@ -69,6 +69,10 @@ class GameClient:
         # Setup udp socket
         self.udp_client = UDPClient(self.shared_state.udp_port, self._on_udp_message)
         
+        # Init controller if connected
+        if pygame.joystick.get_count() > 0:
+            self.joystick = pygame.joystick.Joystick(0)
+        
         # Init pygame window
         self.screen = pygame.display.set_mode(self.shared_state.menu_size)
         pygame.display.set_caption(f"Robot Battle ({self.shared_state.player_id})")
