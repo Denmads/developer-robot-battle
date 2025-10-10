@@ -14,7 +14,7 @@ class ConnectMenuStateRenderer(StateRenderer):
     def __init__(self, state: SharedState):
         super().__init__(state)
         
-        self.all_robots = glob.glob("client\\robots\\*.py")
+        self.all_robots = glob.glob(self.state.path + "\\robots\\*.py")
         self.current_selected_robot: int = 0
         
         if len(self.all_robots) == 0:

@@ -16,6 +16,7 @@ class ClientState(Enum):
 
 @dataclass
 class SharedState:
+    path: str
     player_id: str
     menu_size: tuple[int, int]
     client_state: ClientState

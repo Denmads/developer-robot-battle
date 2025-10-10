@@ -20,7 +20,12 @@ ALLOWED_KEYS = [pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_a, pygame.K_s, pyga
 class GameClient:
     
     def __init__(self):
-        with open("client\\settings.json", "r") as f:
+        if getattr(sys, 'frozen', False):
+            self.path = "."
+        else:
+            self.path = "client"
+        
+        with open(self.path + "\\settings.json", "r") as f:
             settings = json.loads(f.read())
         
         self.tcp_client = TCPClient(self._on_tcp_message, self._on_tcp_disconnect, settings["ip"], settings["port"])
@@ -47,6 +52,7 @@ class GameClient:
         # Setup renderers
         pygame.init()
         self.shared_state = SharedState(
+            self.path,
             player_id=id,
             menu_size=(800, 600),
             client_state=ClientState.NOT_CONNECTED,
