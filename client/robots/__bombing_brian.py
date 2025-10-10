@@ -43,7 +43,7 @@ class MyRobot(RobotInterface):
             command_list.append(WeaponCommand("forwardRight"))
             
     def get_state(self, info: RobotInfo) -> dict:
-        pass
+        return {}
     
     def draw_gui(self, screen: pygame.Surface, arena_size: tuple[int, int], state: dict) -> None:
         pass

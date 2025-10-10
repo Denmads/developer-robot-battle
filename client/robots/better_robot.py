@@ -45,8 +45,7 @@ class MyRobot(RobotInterface):
             
     def get_state(self, info: RobotInfo) -> dict:
         return {
-            "test": 50
         }
     
     def draw_gui(self, screen: pygame.Surface, arena_size: tuple[int, int], state: dict) -> None:
-        pygame.draw.rect(screen, (0, 255, 0), (state["test"],0,100,100))
+        pass

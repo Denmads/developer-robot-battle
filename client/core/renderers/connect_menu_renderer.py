@@ -60,7 +60,7 @@ class ConnectMenuStateRenderer(StateRenderer):
         selected_color = (255, 193, 7)
         for i, file_path in enumerate(self.all_robots):
             file_name = file_path.split("\\")[-1]
-            text = f"{file_name.rstrip('.py')}"
+            text = f"{file_name[:-3]}"
             text_y = 75 + i * robot_spacing
             color = selected_color if i == self.current_selected_robot else (255, 255, 255)
             name_w, _ = render_text_top_left_at(screen, text, text_left_margin, text_y, self.state.font_text, color)

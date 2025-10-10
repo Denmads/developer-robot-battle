@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import queue
+import sys
 import threading
 import pygame
 from client.core.renderers.connect_menu_renderer import ConnectMenuStateRenderer
@@ -28,10 +29,18 @@ class GameClient:
     def start(self):
         # Get info from user
         id: str = None
-        while id is None or len(id) == 0:
+        while id is None or len(id) < 5 or len(id) > 30:
             id = input("Enter player id: ").strip()
+            id = id.strip()
             
-        udp_port = input("UDP Port (6000): ")
+            if len(id) < 5 or len(id) > 30:
+                print("Must be between 5 and 30 characters!")
+            
+        udp_port = ""
+        if len(sys.argv) > 1 and sys.argv[1] == "-dev":
+            udp_port = input("UDP Port (6000): ")
+            udp_port = udp_port.strip()
+            
         if len(udp_port) == 0:
             udp_port = "6000"
             

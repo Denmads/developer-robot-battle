@@ -112,6 +112,9 @@ class Game:
                 if not self.is_test and len(self._alive_players()) <= 1:
                     self.running = False
                     continue
+                elif self.is_test and len(self._alive_players()) == 0:
+                    self.running = False
+                    continue
                 
             self.udp.send_to_all(self.get_state())
             for id, instance in self.players.items():

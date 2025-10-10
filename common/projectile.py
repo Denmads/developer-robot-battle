@@ -146,7 +146,7 @@ def get_projectile_modifier_stats(modifier: ProjectileModifier) -> ProjectileMod
     if modifier == ProjectileModifier.HOMING:
         return HomingProjectileModifierStats(
             energy_cost_multiplier=1.3,
-            max_steering_per_tick= 2 * (math.pi / 180),
+            max_steering_per_tick= 3 * (math.pi / 180),
             max_tracking_dist=150
         )
     elif modifier == ProjectileModifier.EXPLOSIVE:
@@ -162,7 +162,7 @@ def get_projectile_modifier_stats(modifier: ProjectileModifier) -> ProjectileMod
     elif modifier == ProjectileModifier.BOUNCING:
         return BouncingProjectileModifierStats(
             energy_cost_multiplier=1.2,
-            max_bounces=2
+            max_bounces=3
         )
 
 
