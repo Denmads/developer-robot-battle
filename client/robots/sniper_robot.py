@@ -37,8 +37,8 @@ class MyRobot(RobotInterface):
         if index == 6:
             command_list.append(WeaponCommand("b", modifiers=[ProjectileModifier.EXPLOSIVE]))
             
-    def get_state(self) -> dict:
+    def get_state(self, info: RobotInfo) -> dict:
         return {}
     
-    def draw_gui(self, screen: pygame.Surface, state: dict) -> None:
+    def draw_gui(self, screen: pygame.Surface, arena_size: tuple[int, int], state: dict) -> None:
         pass

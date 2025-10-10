@@ -3,6 +3,7 @@ import math
 
 from common.projectile import ProjectileModifier, get_projectile_modifier_stats
 from common.robot import Robot
+from common.weapon import Weapon
 from common.weapon_command import WeaponCommand
 
 def rot(vx, vy, a):
@@ -31,7 +32,7 @@ def calculate_weapon_point_offset(
             point_offset[0] * sn + point_offset[1] * cs + weapon_base_y
         )
         
-def calculate_ability_energy_cost(robot: Robot, commands: list[WeaponCommand]) -> float:
+def calculate_ability_energy_cost(weapons: dict[str, Weapon], commands: list[WeaponCommand]) -> float:
     weapon_fire_counts: defaultdict[str, int] = defaultdict(int)
     weapon_modifier_counts: defaultdict[tuple[str, ProjectileModifier], int] = defaultdict(int)
     for command in commands:
@@ -47,7 +48,7 @@ def calculate_ability_energy_cost(robot: Robot, commands: list[WeaponCommand]) -
         
     energy_cost = 0
     for weapon_id, fire_count in weapon_fire_counts.items():
-        weapon_stats = robot.weapons[weapon_id].stats
+        weapon_stats = weapons[weapon_id].stats
         weapon_energy_cost = weapon_stats.base_energy_cost * math.pow(weapon_stats.consecutive_energy_cost_factor, fire_count - 1)
         
         for modifier in ProjectileModifier:

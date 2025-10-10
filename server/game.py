@@ -152,7 +152,7 @@ class Game:
                 for command in new_commands:
                     command.time = datetime.now()
                     
-                total_energy_cost = calculate_ability_energy_cost(player.robot, new_commands)
+                total_energy_cost = calculate_ability_energy_cost(player.robot.weapons, new_commands)
                     
                 if self._can_activate_ability(player, new_commands) and total_energy_cost <= player.robot.energy:
                     player.robot.energy -= total_energy_cost
@@ -383,7 +383,7 @@ class Game:
         
     def get_robot_state(self, id: str) -> dict:
         player = self.players[id]
-        return player.robot.interface.get_state()
+        return player.robot.interface.get_state(self._get_robot_info(player))
         
     def update_key(self, player_id: str, key: int, state: int):
             is_down = state == 1

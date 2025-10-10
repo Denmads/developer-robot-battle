@@ -44,10 +44,10 @@ class RobotInterface:
     def do_ability(self, index: int, command_list: list[WeaponCommand], info: RobotInfo) -> None:
         pass
     
-    def get_state(self) -> dict:
+    def get_state(self, info: RobotInfo) -> dict:
         pass
     
-    def draw_gui(self, screen: pygame.Surface, state: dict) -> None:
+    def draw_gui(self, screen: pygame.Surface, arena_size: tuple[int, int], state: dict) -> None:
         pass
     
 def parse_robot_config_from_string(code: str) -> RobotInterface:
@@ -87,14 +87,15 @@ class Robot:
         self.move_speed = self.hull.move_speed + self.stats.move_speed * 0.5
         self.turn_speed = self.hull.turn_speed + self.stats.turn_speed * 0.02
         
-        self.weapons = self._create_weapons(self.configuration)
+        self.weapons = Robot.create_weapons(self.size, self.configuration)
         
-    def _create_weapons(self, config: RobotBuilder):
+    @staticmethod
+    def create_weapons(size: float, config: RobotBuilder):
         return {
             w.id: Weapon(
                 w.id, 
-                w.normalized_x() * self.size, 
-                w.normalized_y() * self.size, 
+                w.normalized_x() * size, 
+                w.normalized_y() * size, 
                 w.angle * (math.pi / 180),
                 w.type,
                 get_weapon_stats(w.type)

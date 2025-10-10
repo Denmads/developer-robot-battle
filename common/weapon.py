@@ -48,7 +48,7 @@ class WeaponStats:
     projectile_life_time: timedelta | None = field(default=None)
     
 STANDARD_WEAPON_STATS = WeaponStats(
-    base_energy_cost=5,
+    base_energy_cost=8,
     consecutive_energy_cost_factor=1.20,
     cooldown_seconds=0.5,
     base_damage=3,
@@ -58,7 +58,7 @@ STANDARD_WEAPON_STATS = WeaponStats(
 
 CANNON_WEAPON_STATS = WeaponStats(
     base_energy_cost=20,
-    consecutive_energy_cost_factor=1.10,
+    consecutive_energy_cost_factor=1.20,
     cooldown_seconds=3,
     base_damage=15,
     bullet_size=10,
@@ -67,7 +67,7 @@ CANNON_WEAPON_STATS = WeaponStats(
 
 SNIPER_WEAPON_STATS = WeaponStats(
     base_energy_cost=10,
-    consecutive_energy_cost_factor=1.10,
+    consecutive_energy_cost_factor=1.20,
     cooldown_seconds=2,
     base_damage=8,
     bullet_size=3,
@@ -76,12 +76,12 @@ SNIPER_WEAPON_STATS = WeaponStats(
 
 MINE_DEPLOYER_WEAPON_STATS =  WeaponStats(
     base_energy_cost=10,
-    consecutive_energy_cost_factor=1.10,
+    consecutive_energy_cost_factor=1.20,
     cooldown_seconds=2,
     base_damage=15,
     bullet_size=8,
     bullet_speed=0,
-    projectile_life_time=timedelta(seconds=5)
+    projectile_life_time=timedelta(seconds=15)
 )
 
 def get_weapon_stats(type: WeaponType) -> WeaponStats:

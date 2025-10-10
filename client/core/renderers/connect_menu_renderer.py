@@ -118,7 +118,7 @@ class ConnectMenuStateRenderer(StateRenderer):
                 []
             ))
             ability_stats[key] = {
-                "cost": round(calculate_ability_energy_cost(self.state.robot, commands), 1),
+                "cost": round(calculate_ability_energy_cost(self.state.robot.weapons, commands), 1),
                 "cooldown": round(calculate_ability_cooldown(self.state.robot, commands), 2)
             }
         

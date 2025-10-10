@@ -43,8 +43,8 @@ class MyRobot(RobotInterface):
             command_list.append(WeaponCommand("br"))
             command_list.append(WeaponCommand("fr"))
             
-    def get_state(self) -> dict:
+    def get_state(self, info: RobotInfo) -> dict:
         return {}
     
-    def draw_gui(self, screen: pygame.Surface, state: dict) -> None:
+    def draw_gui(self, screen: pygame.Surface, arena_size: tuple[int, int], state: dict) -> None:
         pygame.draw.rect(screen, (255, 0, 0), (0,0,100,100))

@@ -18,12 +18,6 @@ bullet effects:
     poison
     Energy-Drain
 
-bullet modifier:
-    Homing
-    Explosive
-    Piercing
-    Bouncing
-
 new stats:
     damage
 

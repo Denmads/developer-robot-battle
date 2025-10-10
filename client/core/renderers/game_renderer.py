@@ -91,7 +91,7 @@ class GameStateRenderer(StateRenderer):
             self._draw_explosions(screen, delta)
             self._draw_player_health_and_energy_bars(screen, alpha)
             
-            self.state.robot.interface.draw_gui(screen, self.robot_state)
+            self.state.robot.interface.draw_gui(screen, self.arena_size, self.robot_state)
 
             self._render_countdown_timer(screen)
             self._render_winner(screen)
