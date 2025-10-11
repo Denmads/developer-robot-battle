@@ -2,7 +2,7 @@ from datetime import timedelta
 import glob
 import pygame
 
-from client.core.render_utils import render_text_bottom_right_at, render_text_top_left_at, render_text_top_right_at
+from client.core.render_utils import render_text_bottom_left_at, render_text_bottom_right_at, render_text_top_left_at, render_text_top_right_at
 from client.core.state_renderer import SharedState, StateRenderer
 from common.calculations import calculate_ability_cooldown, calculate_ability_energy_cost
 from common.constants import MIN_AXIS_VALUE
@@ -22,6 +22,8 @@ class ConnectMenuStateRenderer(StateRenderer):
         self.controller_down_prev_active: bool = False
         self.controller_up_active: bool = False
         self.controller_down_active: bool = False
+        
+        self.failed_to_connect: bool = False
         
         if len(self.all_robots) == 0:
             print("No robots to use. Add a robot configuration to 'client/robots'!")
@@ -44,9 +46,12 @@ class ConnectMenuStateRenderer(StateRenderer):
             self.controller_down_prev_active = self.controller_down_active
         
         if (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN) or (event.type == pygame.JOYBUTTONDOWN and event.button == 0):
-            self.state.tcp.connect()
-            with open(self.all_robots[self.current_selected_robot]) as f:
-                self.state.tcp.send(PlayerInfoMessage(self.state.player_id, int(self.state.udp_port), f.read()))
+            try:
+                self.state.tcp.connect()
+                with open(self.all_robots[self.current_selected_robot]) as f:
+                    self.state.tcp.send(PlayerInfoMessage(self.state.player_id, int(self.state.udp_port), f.read()))
+            except:
+                self.failed_to_connect = True
         elif (event.type == pygame.KEYDOWN and event.key == pygame.K_UP) or (self.controller_up_active and not self.controller_up_prev_active):
             self.current_selected_robot = max(0, self.current_selected_robot - 1)
             self._create_robot()
@@ -65,6 +70,9 @@ class ConnectMenuStateRenderer(StateRenderer):
         self._render_robot_stats(screen)
         
         render_text_bottom_right_at(screen, f"Press 'Enter'{' / A' if self.state.controller_connected else ''} to connect...", self.state.menu_size[0] - 50, self.state.menu_size[1] - 50, self.state.font_text)
+        
+        if self.failed_to_connect:
+            render_text_bottom_left_at(screen, "Failed to connect to server!!!", 50, self.state.menu_size[1] - 50, self.state.font_text, (255, 155, 155))
         
     def _render_robot_selector(self, screen: pygame.Surface):
         render_text_top_left_at(screen, "Robots:", 50, 50, self.state.font_header)
